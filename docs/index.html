@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TAF Klangkiste PRO</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- Ermöglicht Multi-Threading im Browser für FFmpeg -->
+  <script src="https://unpkg.com/coi-serviceworker@0.1.6/coi-serviceworker.min.js"></script>
+  <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
+</head>
+<body>
+  <main class="app">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">Client-Side WebApp</p>
+        <h1>TAF Klangkiste PRO</h1>
+        <p class="lead">Lokal im Browser konvertieren – mit Auto-Metadaten und Cover-Support.</p>
+      </div>
+      <div class="status" id="status">Warte auf Eingabe</div>
+    </section>
+
+    <div class="grid-main">
+      <div class="column">
+        <section class="panel upload-zone" id="dropzone">
+          <input id="fileInput" type="file" accept=".taf,application/octet-stream" hidden>
+          <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M12 16.5V7.5m0 0l-3 3m3-3l3 3M2 12c0-4.418 0-6.627 1.318-8.159C4.636 2.31 6.845 2.31 11.264 2.31h1.472c4.418 0 6.627 0 7.945 1.532C22 5.373 22 7.582 22 12c0 4.418 0 6.627-1.318 8.159C19.364 21.69 17.155 21.69 12.736 21.69h-1.472c-4.418 0-6.627 0-7.945-1.532C2 18.627 2 16.418 2 12z"></path></svg>
+          <p><strong>TAF-Datei auswählen</strong></p>
+          <p class="small">Klicken oder Datei hier ablegen</p>
+          <button class="btn" id="pickBtn">Datei wählen</button>
+          <p class="small file-name" id="fileName">Keine TAF geladen.</p>
+        </section>
+
+        <section class="panel">
+          <h3>Optionen</h3>
+          <div class="grid-2">
+            <label>Format
+              <select id="optFormat">
+                <option value="mp3">MP3</option>
+                <option value="m4a">M4A (AAC)</option>
+                <option value="opus">OPUS</option>
+              </select>
+            </label>
+            <label>Bitrate
+              <select id="optBitrate">
+                <option value="128k">128 kbps</option>
+                <option value="192k" selected>192 kbps</option>
+                <option value="256k">256 kbps (HQ)</option>
+              </select>
+            </label>
+            <label>Cover einbetten
+              <select id="optCover">
+                <option value="yes" selected>Ja (falls gefunden)</option>
+                <option value="no">Nein</option>
+              </select>
+            </label>
+            <label>CUE-Sheet
+              <select id="optCue">
+                <option value="yes" selected>Ja</option>
+                <option value="no">Nein</option>
+              </select>
+            </label>
+          </div>
+        </section>
+      </div>
+
+      <div class="column">
+        <section class="panel meta-panel">
+          <div class="meta-header">
+            <h3>Erkannte Metadaten</h3>
+            <span class="badge" id="dbStatus">Lade DB...</span>
+          </div>
+          <p class="small">Diese Daten stammen aus der Tonies-DB und können angepasst werden.</p>
+          <div class="grid-1">
+            <label>Titel <input id="metaTitle" type="text" placeholder="Titel der Episode"></label>
+            <label>Serie / Album <input id="metaAlbum" type="text" placeholder="Serienname"></label>
+            <label>Beschreibung <textarea id="metaDesc" rows="3" placeholder="Handlung..."></textarea></label>
+          </div>
+          <div class="cover-preview" id="coverPreview"></div>
+        </section>
+      </div>
+    </div>
+
+    <section class="panel action-panel">
+      <button class="btn primary large" id="convertBtn" disabled>Konvertierung starten</button>
+      <div class="progress-wrap">
+        <div class="progress"><div class="bar" id="progressBar"></div></div>
+        <p class="small progress-text" id="progressText">Warte auf Datei...</p>
+      </div>
+      <div class="download-area" id="downloadArea"></div>
+    </section>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>
