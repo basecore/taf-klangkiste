@@ -216,7 +216,7 @@ async function ensureFfmpegLoaded() {
     toBlobURL(`${CORE_BASE}/ffmpeg-core.wasm`, "application/wasm")
   ]);
   ffmpeg.on("log", ({ message }) => log("INFO", `FFmpeg: ${message}`));
-  ffmpeg.on("progress", ({ progress }) => setProgress(Math.round(progress * 100), `Konvertiere: ${Math.round(progress * 100)}%`);
+  ffmpeg.on("progress", ({ progress }) => setProgress(Math.round(progress * 100), `Konvertiere: ${Math.round(progress * 100)}%`));
   await ffmpeg.load({ coreURL, wasmURL });
   ffmpegInstance = ffmpeg;
   return ffmpegInstance;
@@ -257,7 +257,6 @@ async function lookupMetadata(hash, filename) {
   if (meta) {
     setStatus("Tonie erkannt!");
     setMetadataFields(meta, filename, hash);
-
     const picUrl = meta.pic || meta.image || meta.cover;
     if (picUrl) {
       try {
@@ -332,7 +331,10 @@ async function convertFile() {
     if (format === "mp3") args.push("-c:a", "libmp3lame", "-b:a", bitrate);
     else if (format === "m4a") args.push("-c:a", "aac", "-b:a", bitrate);
     else args.push("-c:a", "libopus", "-b:a", bitrate);
-    args.push("-metadata", `title=${els.metaTitle.value}`, "-metadata", `album=${els.metaAlbum.value}`, "-metadata", `comment=${els.metaDesc.value}`, outFile);
+    args.push("-metadata", `title=${els.metaTitle.value}`);
+    args.push("-metadata", `album=${els.metaAlbum.value}`);
+    args.push("-metadata", `comment=${els.metaDesc.value}`);
+    args.push(outFile);
 
     await ffmpeg.exec(args);
     const data = await ffmpeg.readFile(outFile);
