@@ -17,6 +17,11 @@ const els = {
   metaTitle: document.getElementById('metaTitle'),
   metaAlbum: document.getElementById('metaAlbum'),
   metaDesc: document.getElementById('metaDesc'),
+  metaAge: document.getElementById('metaAge'),
+  metaLanguage: document.getElementById('metaLanguage'),
+  metaCategory: document.getElementById('metaCategory'),
+  metaRuntime: document.getElementById('metaRuntime'),
+  metaTracks: document.getElementById('metaTracks'),
   coverPreview: document.getElementById('coverPreview'),
   optFormat: document.getElementById('optFormat'),
   optBitrate: document.getElementById('optBitrate'),
@@ -247,6 +252,18 @@ function buildGuessDescription(meta, filename, hash) {
   return parts.join('\n\n');
 }
 
+function minutesFromRuntime(v) {
+  const n = Number(v);
+  if (!Number.isFinite(n) || n <= 0) return '';
+  return `${Math.round(n)} Minuten`;
+}
+
+function joinTracks(meta) {
+  const tracks = meta?.['track-desc'] || meta?.tracks || [];
+  if (!Array.isArray(tracks) || !tracks.length) return '';
+  return tracks.map((t, i) => `${i + 1}. ${t}`).join('\n');
+}
+
 async function loadCoverFromUrl(url) {
   if (!url) return null;
   const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
@@ -284,6 +301,20 @@ function bestDBMatch(filename, hash) {
   return { meta: null, titleKey, source: 'none' };
 }
 
+function setMetadataFields(meta, filename, hash) {
+  const title = normalizeText(meta?.title || meta?.episode || filename.replace(/\.taf$/i, ''));
+  const album = normalizeText(meta?.series || meta?.album || meta?.article || '');
+  const description = buildGuessDescription(meta, filename, hash);
+  if (els.metaTitle) els.metaTitle.value = title;
+  if (els.metaAlbum) els.metaAlbum.value = album;
+  if (els.metaDesc) els.metaDesc.value = description;
+  if (els.metaAge) els.metaAge.value = meta?.age ? `${meta.age} Jahre` : '';
+  if (els.metaLanguage) els.metaLanguage.value = normalizeText(meta?.language || '');
+  if (els.metaCategory) els.metaCategory.value = normalizeText(meta?.category || '');
+  if (els.metaRuntime) els.metaRuntime.value = minutesFromRuntime(meta?.runtime);
+  if (els.metaTracks) els.metaTracks.value = joinTracks(meta);
+}
+
 async function handleFile(file) {
   if (!file) return;
   currentFile = file;
@@ -296,8 +327,7 @@ async function handleFile(file) {
   const slice = file.slice(HEADER_SIZE, HEADER_SIZE + 10 * 1024 * 1024);
   const buffer = await slice.arrayBuffer();
   const hashBuffer = await crypto.subtle.digest('SHA-1', buffer);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const currentHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  const currentHash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
   log('DEBUG', 'Hash berechnet', { currentHash });
   await lookupMetadata(currentHash, file.name);
 }
@@ -319,18 +349,11 @@ async function lookupMetadata(hash, filename) {
 
   if (meta) {
     setStatus('Tonie erkannt!');
-    const title = normalizeText(meta.title || meta.episode || filename.replace(/\.taf$/i, ''));
-    const album = normalizeText(meta.series || meta.album || meta.article || '');
-    const description = buildGuessDescription(meta, filename, hash);
-
-    if (els.metaTitle) els.metaTitle.value = title;
-    if (els.metaAlbum) els.metaAlbum.value = album;
-    if (els.metaDesc) els.metaDesc.value = description;
-
+    setMetadataFields(meta, filename, hash);
     log('INFO', 'Tonies-DB Metadaten gesetzt', {
-      title,
-      album,
-      descriptionPresent: isMeaningful(description),
+      title: els.metaTitle?.value || '',
+      album: els.metaAlbum?.value || '',
+      descriptionPresent: isMeaningful(els.metaDesc?.value || ''),
       keys: Object.keys(meta || {}),
       article: meta?.article || null,
       image: meta?.image || meta?.pic || null,
@@ -354,6 +377,11 @@ async function lookupMetadata(hash, filename) {
     if (els.metaTitle) els.metaTitle.value = filename.replace(/\.taf$/i, '');
     if (els.metaAlbum) els.metaAlbum.value = 'Unbekannt';
     if (els.metaDesc) els.metaDesc.value = `Keine Tonies-DB Zuordnung gefunden. Hash: ${hash}`;
+    if (els.metaAge) els.metaAge.value = '';
+    if (els.metaLanguage) els.metaLanguage.value = '';
+    if (els.metaCategory) els.metaCategory.value = '';
+    if (els.metaRuntime) els.metaRuntime.value = '';
+    if (els.metaTracks) els.metaTracks.value = '';
     log('WARN', 'Hash nicht in DB', { hash, filename, titleKey: match.titleKey });
   }
 
@@ -398,8 +426,7 @@ async function convertFile() {
     const format = els.optFormat.value;
     const bitrate = els.optBitrate.value;
     const outFile = `output.${format}`;
-    const audioPayload = currentFile.slice(HEADER_SIZE);
-    const audioBuffer = await audioPayload.arrayBuffer();
+    const audioBuffer = await currentFile.slice(HEADER_SIZE).arrayBuffer();
     log('DEBUG', 'Audio-Payload gelesen', { bytes: audioBuffer.byteLength, format, bitrate });
 
     if (ff.kind === 'modern') {
@@ -504,18 +531,8 @@ function bindEvents() {
     els.dropzone.onclick = () => els.fileInput.click();
   }
   if (els.convertBtn) els.convertBtn.onclick = convertFile;
-  if (els.forceLocalBtn) els.forceLocalBtn.onclick = () => {
-    engineSource = 'local';
-    ffmpegInstance = null;
-    updateEngineUI();
-    setStatus('Lokal-Modus aktiviert. Bitte Engine neu laden.');
-    log('INFO', 'Engine Source auf lokal gesetzt');
-  };
-  if (els.debugToggle) els.debugToggle.onclick = () => {
-    debugEnabled = !debugEnabled;
-    if (els.debugLog) els.debugLog.style.display = debugEnabled ? 'block' : 'none';
-    log('INFO', `Debug ${debugEnabled ? 'aktiv' : 'deaktiviert'}`);
-  };
+  if (els.forceLocalBtn) els.forceLocalBtn.onclick = () => { engineSource = 'local'; ffmpegInstance = null; updateEngineUI(); setStatus('Lokal-Modus aktiviert. Bitte Engine neu laden.'); log('INFO', 'Engine Source auf lokal gesetzt'); };
+  if (els.debugToggle) els.debugToggle.onclick = () => { debugEnabled = !debugEnabled; if (els.debugLog) els.debugLog.style.display = debugEnabled ? 'block' : 'none'; log('INFO', `Debug ${debugEnabled ? 'aktiv' : 'deaktiviert'}`); };
 }
 
 function initDefaults() {
@@ -528,12 +545,7 @@ function initDefaults() {
 async function init() {
   initDefaults();
   bindEvents();
-  log('INFO', 'App gestartet', {
-    userAgent: navigator.userAgent,
-    sharedArrayBuffer: hasSharedArrayBuffer(),
-    crossOriginIsolated: hasCrossOriginIsolation(),
-    location: location.href
-  });
+  log('INFO', 'App gestartet', { userAgent: navigator.userAgent, sharedArrayBuffer: hasSharedArrayBuffer(), crossOriginIsolated: hasCrossOriginIsolation(), location: location.href });
   await initDb();
   updateEngineUI();
 }
