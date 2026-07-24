@@ -1,21 +1,28 @@
 # TAF Klangkiste PRO
 
-TAF Klangkiste PRO ist eine GitHub-Pages-WebApp, mit der du Toniebox-TAF-Dateien direkt im Browser in Audioformate wie MP3, M4A oder OPUS umwandeln kannst.
+[![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-live-success?logo=githubpages&logoColor=white)](https://basecore.github.io/taf-klangkiste/)
+[![Version](https://img.shields.io/badge/version-1.0.0-blue)](#versionierung)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+
+[🚀 App öffnen](https://basecore.github.io/taf-klangkiste/) · [📦 Repository](https://github.com/basecore/taf-klangkiste) · [🐛 Issues](https://github.com/basecore/taf-klangkiste/issues)
+
+TAF Klangkiste PRO ist eine GitHub-Pages-WebApp, mit der du Toniebox-TAF-Dateien direkt im Browser in Audioformate wie **MP3**, **M4A/AAC** oder **OPUS** umwandeln kannst.
 
 ## Features
 
 - Upload per Klick oder Drag & Drop.
-- Format-Auswahl: MP3, M4A, OPUS.
-- Bitrate-Auswahl.
+- Auswahl des Ausgabeformats.
+- Auswahl der Bitrate bzw. Qualität.
 - Cover einbetten: Ja / Nein.
 - CUE-Datei erzeugen: Ja / Nein.
 - Metadaten automatisch aus der Tonies-Datenbank erkennen.
-- Direkt-Download im Browser.
-- Funktioniert ohne lokale Installation und ohne Python-Start auf dem Computer.
+- Manuelle Bearbeitung von Titel, Serie und Beschreibung.
+- Direkter Download der erzeugten Datei im Browser.
+- Läuft ohne lokale Python-Installation.
 
 ## So benutzt du die App
 
-1. Öffne die GitHub-Pages-Seite.
+1. Öffne die App über den Link oben.
 2. Wähle eine `.taf`-Datei aus oder ziehe sie in das Upload-Feld.
 3. Prüfe oder ändere Titel, Serie und Beschreibung.
 4. Wähle Format, Bitrate, Cover und CUE.
@@ -24,21 +31,36 @@ TAF Klangkiste PRO ist eine GitHub-Pages-WebApp, mit der du Toniebox-TAF-Dateien
 
 ## Unterstützte Ausgabeformate
 
-- MP3
-- M4A / AAC
-- OPUS
+- MP3.
+- M4A / AAC.
+- OPUS.
 
-## Hinweise
+## Für Smartphones
 
-- Die Verarbeitung läuft komplett im Browser.
-- Große Dateien können auf Smartphones an Speichergrenzen stoßen.
-- Am zuverlässigsten funktioniert die App auf modernen Desktop-Browsern.
-- Einige Cover-Bilder werden über externe Quellen geladen.
+Die App funktioniert auch auf Smartphones, weil alles direkt im Browser läuft.
 
-## GitHub Pages
+Beachte aber:
+- Große Dateien können auf mobilen Geräten zu Speicherproblemen führen.
+- Desktop-Browser sind für lange Hörspiele meist zuverlässiger.
+- Moderne Android-Browser funktionieren in der Regel besser als iOS bei großen Dateien.
 
-Diese App wird über GitHub Pages aus dem `docs/`-Ordner bereitgestellt.
-Lege die Seite in GitHub unter `Settings -> Pages` auf `main` und `/docs` fest.
+## Technischer Aufbau
+
+- GitHub Pages für das Frontend.
+- JavaScript für die Bedienoberfläche.
+- FFmpeg.wasm für die Umwandlung im Browser.
+- Tonies-Datenbank für Metadaten und Cover.
+
+## GitHub Pages Setup
+
+Diese App wird aus dem Ordner `docs/` veröffentlicht.
+
+So aktivierst du sie:
+1. Öffne `Settings`.
+2. Gehe zu `Pages`.
+3. Wähle als Quelle `Deploy from a branch`.
+4. Branch: `main`.
+5. Ordner: `/docs`.
 
 ## Projektstruktur
 
@@ -49,3 +71,22 @@ docs/
 ├── app.js
 └── .nojekyll
 ```
+
+## Versionierung
+
+Aktuelle Version: `1.0.0`
+
+### Changelog
+
+- `1.0.0` – Erste browserbasierte GitHub-Pages-Version mit Upload, Optionen, Metadaten, Cover-Support und Download.
+
+## Hinweise
+
+- Die Konvertierung läuft vollständig im Browser.
+- Die App benötigt eine stabile Internetverbindung für die Tonies-Datenbank und das FFmpeg-WASM-Laden.
+- Bei sehr großen Dateien kann der Browser an seine Grenzen kommen.
+- Einige Cover-Bilder werden über externe Quellen geladen.
+
+## Lizenz
+
+Dieses Projekt steht unter der MIT-Lizenz.
