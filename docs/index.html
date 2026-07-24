@@ -4,8 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>TAF Klangkiste PRO</title>
-  <meta name="description" content="Client-Side WebApp fuer TAF-Konvertierung mit Tonies-DB, Cover, Debug-Logs und CDN-/Lokal-Modus.">
+  <meta name="description" content="TAF-Konvertierung mit Tonies-DB, Cover, Metadaten, Debug-Log und FFmpeg.">
   <link rel="stylesheet" href="./style.css">
+  <script type="module" src="./app.js"></script>
 </head>
 <body>
   <main class="app">
@@ -13,7 +14,7 @@
       <div>
         <p class="eyebrow">Client-Side WebApp</p>
         <h1>TAF Klangkiste PRO</h1>
-        <p class="lead">Lokal im Browser konvertieren - mit Tonies-DB, automatischer Metadaten-Erkennung, Cover-Anzeige, Debug-Logs und CDN-Standard mit lokalem Fallback.</p>
+        <p class="lead">TAF-Datei importieren, Tonies-Metadaten anzeigen, Cover einbetten und direkt im Browser konvertieren.</p>
       </div>
       <div class="top-actions">
         <div id="status" class="status">Warte auf Eingabe</div>
@@ -45,7 +46,7 @@
           <div class="section-header">
             <div>
               <h2>Tonies-Metadaten</h2>
-              <div class="small">Titel, Album, Beschreibung und Cover werden aus der Tonies-DB ubernommen, wenn der Hash passt.</div>
+              <div class="small">Titel, Beschreibung, Alter, Sprache, Kategorie, Laufzeit und Trackliste aus der Tonies-DB.</div>
             </div>
             <span class="badge">Auto-Erkennung</span>
           </div>
@@ -62,11 +63,23 @@
               Beschreibung
               <textarea id="metaDesc" placeholder="Beschreibung"></textarea>
             </label>
+            <div class="grid-2">
+              <label>Alter<input id="metaAge" type="text" readonly></label>
+              <label>Sprache<input id="metaLanguage" type="text" readonly></label>
+            </div>
+            <div class="grid-2">
+              <label>Kategorie<input id="metaCategory" type="text" readonly></label>
+              <label>Laufzeit (Minuten)<input id="metaRuntime" type="text" readonly></label>
+            </div>
             <div class="engine-row">
               <span class="engine-chip" id="engineSourceLabel">CDN ist aktiv</span>
               <span class="engine-chip" id="engineMode">Engine: CDN</span>
               <button id="forceLocalBtn" class="btn" type="button">Lokal-Modus erzwingen</button>
             </div>
+            <label>
+              Trackliste
+              <textarea id="metaTracks" readonly placeholder="Trackliste"></textarea>
+            </label>
             <div id="engineHint" class="note">Warte auf Datei...</div>
             <div id="coverPreview" class="cover-preview" aria-label="Cover-Vorschau"></div>
           </div>
@@ -78,7 +91,7 @@
           <div class="section-header">
             <div>
               <h2>Optionen</h2>
-              <div class="small">CDN als Standard. Lokal nur verwenden, wenn du die ffmpeg-Dateien im Repo abgelegt hast.</div>
+              <div class="small">FFmpeg wird via toBlobURL geladen. Lokal ist nur nötig, wenn du eigene Assets hosten willst.</div>
             </div>
             <span class="badge">Browser-Verarbeitung</span>
           </div>
@@ -145,21 +158,16 @@
         </div>
 
         <div class="panel">
-          <div class="section-header">
-            <div>
-              <h2>Hinweise</h2>
-            </div>
-          </div>
+          <div class="section-header"><div><h2>Hinweise</h2></div></div>
           <ul class="list">
             <li>Wenn <code>SharedArrayBuffer</code> fehlt, nutzt die App den Fallback-Modus.</li>
-            <li>Das Cover wird, wenn moeglich, direkt aus der Tonies-DB geladen.</li>
-            <li>Fuer lokale Engine-Dateien nutze <code>docs/vendor/ffmpeg/</code>.</li>
+            <li>Das Cover wird direkt aus der Tonies-DB geladen.</li>
+            <li>Für GitHub Pages ist <code>docs/</code> als Publish-Root sinnvoll.</li>
+            <li>FFmpeg läuft hier ohne lokalen Proxy über <code>toBlobURL()</code>.</li>
           </ul>
         </div>
       </div>
     </section>
   </main>
-
-  <script src="./app.js" defer></script>
 </body>
 </html>
