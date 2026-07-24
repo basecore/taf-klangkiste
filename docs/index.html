@@ -4,10 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>TAF Klangkiste PRO</title>
-  <link rel="stylesheet" href="style.css">
-  <!-- Ermöglicht Multi-Threading im Browser für FFmpeg -->
-  <script src="https://unpkg.com/coi-serviceworker@0.1.6/coi-serviceworker.min.js"></script>
-  <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
+  <meta name="description" content="Client-Side WebApp fuer TAF-Konvertierung mit Tonies-DB, Cover, Debug-Logs und CDN-/Lokal-Modus.">
+  <link rel="stylesheet" href="./style.css">
 </head>
 <body>
   <main class="app">
@@ -15,81 +13,153 @@
       <div>
         <p class="eyebrow">Client-Side WebApp</p>
         <h1>TAF Klangkiste PRO</h1>
-        <p class="lead">Lokal im Browser konvertieren – mit Auto-Metadaten und Cover-Support.</p>
+        <p class="lead">Lokal im Browser konvertieren - mit Tonies-DB, automatischer Metadaten-Erkennung, Cover-Anzeige, Debug-Logs und CDN-Standard mit lokalem Fallback.</p>
       </div>
-      <div class="status" id="status">Warte auf Eingabe</div>
+      <div class="top-actions">
+        <div id="status" class="status">Warte auf Eingabe</div>
+        <button id="debugToggle" class="btn secondary" type="button">Debug umschalten</button>
+      </div>
     </section>
 
-    <div class="grid-main">
-      <div class="column">
-        <section class="panel upload-zone" id="dropzone">
-          <input id="fileInput" type="file" accept=".taf,application/octet-stream" hidden>
-          <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M12 16.5V7.5m0 0l-3 3m3-3l3 3M2 12c0-4.418 0-6.627 1.318-8.159C4.636 2.31 6.845 2.31 11.264 2.31h1.472c4.418 0 6.627 0 7.945 1.532C22 5.373 22 7.582 22 12c0 4.418 0 6.627-1.318 8.159C19.364 21.69 17.155 21.69 12.736 21.69h-1.472c-4.418 0-6.627 0-7.945-1.532C2 18.627 2 16.418 2 12z"></path></svg>
-          <p><strong>TAF-Datei auswählen</strong></p>
-          <p class="small">Klicken oder Datei hier ablegen</p>
-          <button class="btn" id="pickBtn">Datei wählen</button>
-          <p class="small file-name" id="fileName">Keine TAF geladen.</p>
-        </section>
+    <section class="grid-main">
+      <div>
+        <div class="panel upload-zone" id="dropzone" role="button" tabindex="0" aria-label="TAF-Datei auswählen">
+          <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <path d="M7 10l5-5 5 5"/>
+            <path d="M12 5v12"/>
+          </svg>
+          <h2>Datei auswählen</h2>
+          <p>Klicken oder Datei hier ablegen</p>
+          <div class="control-row" style="justify-content:center; margin-top: 14px;">
+            <button id="pickBtn" class="btn primary" type="button">TAF-Datei auswählen</button>
+            <input id="fileInput" type="file" accept=".taf" class="hidden">
+          </div>
+          <div id="fileName" class="file-name">Keine TAF geladen.</div>
+          <div style="margin-top:12px;">
+            <span id="dbStatus" class="badge">Tonies-DB wird geladen...</span>
+          </div>
+        </div>
 
-        <section class="panel">
-          <h3>Optionen</h3>
+        <div class="panel">
+          <div class="section-header">
+            <div>
+              <h2>Tonies-Metadaten</h2>
+              <div class="small">Titel, Album, Beschreibung und Cover werden aus der Tonies-DB ubernommen, wenn der Hash passt.</div>
+            </div>
+            <span class="badge">Auto-Erkennung</span>
+          </div>
+          <div class="meta-box">
+            <label>
+              Titel
+              <input id="metaTitle" type="text" placeholder="Titel">
+            </label>
+            <label>
+              Album / Serie
+              <input id="metaAlbum" type="text" placeholder="Album">
+            </label>
+            <label>
+              Beschreibung
+              <textarea id="metaDesc" placeholder="Beschreibung"></textarea>
+            </label>
+            <div class="engine-row">
+              <span class="engine-chip" id="engineSourceLabel">CDN ist aktiv</span>
+              <span class="engine-chip" id="engineMode">Engine: CDN</span>
+              <button id="forceLocalBtn" class="btn" type="button">Lokal-Modus erzwingen</button>
+            </div>
+            <div id="engineHint" class="note">Warte auf Datei...</div>
+            <div id="coverPreview" class="cover-preview" aria-label="Cover-Vorschau"></div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="panel action-panel">
+          <div class="section-header">
+            <div>
+              <h2>Optionen</h2>
+              <div class="small">CDN als Standard. Lokal nur verwenden, wenn du die ffmpeg-Dateien im Repo abgelegt hast.</div>
+            </div>
+            <span class="badge">Browser-Verarbeitung</span>
+          </div>
+
           <div class="grid-2">
-            <label>Format
+            <label>
+              Ausgabeformat
               <select id="optFormat">
                 <option value="mp3">MP3</option>
-                <option value="m4a">M4A (AAC)</option>
+                <option value="m4a">M4A</option>
                 <option value="opus">OPUS</option>
               </select>
             </label>
-            <label>Bitrate
+            <label>
+              Bitrate
               <select id="optBitrate">
-                <option value="128k">128 kbps</option>
-                <option value="192k" selected>192 kbps</option>
-                <option value="256k">256 kbps (HQ)</option>
+                <option value="96k">96k</option>
+                <option value="128k" selected>128k</option>
+                <option value="160k">160k</option>
+                <option value="192k">192k</option>
               </select>
             </label>
-            <label>Cover einbetten
+          </div>
+
+          <div class="grid-2" style="margin-top: 16px;">
+            <label>
+              Cover einbetten
               <select id="optCover">
-                <option value="yes" selected>Ja (falls gefunden)</option>
+                <option value="yes" selected>Ja</option>
                 <option value="no">Nein</option>
               </select>
             </label>
-            <label>CUE-Sheet
+            <label>
+              CUE erzeugen
               <select id="optCue">
                 <option value="yes" selected>Ja</option>
                 <option value="no">Nein</option>
               </select>
             </label>
           </div>
-        </section>
-      </div>
 
-      <div class="column">
-        <section class="panel meta-panel">
-          <div class="meta-header">
-            <h3>Erkannte Metadaten</h3>
-            <span class="badge" id="dbStatus">Lade DB...</span>
+          <div style="margin-top: 18px;">
+            <button id="convertBtn" class="btn primary large" type="button" disabled>Konvertierung starten</button>
           </div>
-          <p class="small">Diese Daten stammen aus der Tonies-DB und können angepasst werden.</p>
-          <div class="grid-1">
-            <label>Titel <input id="metaTitle" type="text" placeholder="Titel der Episode"></label>
-            <label>Serie / Album <input id="metaAlbum" type="text" placeholder="Serienname"></label>
-            <label>Beschreibung <textarea id="metaDesc" rows="3" placeholder="Handlung..."></textarea></label>
-          </div>
-          <div class="cover-preview" id="coverPreview"></div>
-        </section>
-      </div>
-    </div>
 
-    <section class="panel action-panel">
-      <button class="btn primary large" id="convertBtn" disabled>Konvertierung starten</button>
-      <div class="progress-wrap">
-        <div class="progress"><div class="bar" id="progressBar"></div></div>
-        <p class="small progress-text" id="progressText">Warte auf Datei...</p>
+          <div class="progress-wrap">
+            <div class="progress"><div id="progressBar" class="bar"></div></div>
+            <div id="progressText" class="progress-text">Warte auf Datei...</div>
+          </div>
+
+          <div id="downloadArea" class="download-area"></div>
+        </div>
+
+        <div class="panel">
+          <div class="section-header">
+            <div>
+              <h2>Debug-Log</h2>
+              <div class="small">Zeigt DB-Laden, Hash-Lookup, Cover-Fetch, FFmpeg-Setup und Fehlerdetails.</div>
+            </div>
+            <span class="badge">Verbose</span>
+          </div>
+          <div class="note">Wenn die Tonies-DB keine Beschreibung liefert, wird ein Fallback gesetzt und im Log vermerkt.</div>
+          <div id="debugLog" class="debug-box"></div>
+        </div>
+
+        <div class="panel">
+          <div class="section-header">
+            <div>
+              <h2>Hinweise</h2>
+            </div>
+          </div>
+          <ul class="list">
+            <li>Wenn <code>SharedArrayBuffer</code> fehlt, nutzt die App den Fallback-Modus.</li>
+            <li>Das Cover wird, wenn moeglich, direkt aus der Tonies-DB geladen.</li>
+            <li>Fuer lokale Engine-Dateien nutze <code>docs/vendor/ffmpeg/</code>.</li>
+          </ul>
+        </div>
       </div>
-      <div class="download-area" id="downloadArea"></div>
     </section>
   </main>
-  <script src="app.js"></script>
+
+  <script src="./app.js" defer></script>
 </body>
 </html>
