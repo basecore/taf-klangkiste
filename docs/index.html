@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>TAF Klangkiste PRO</title>
-  <meta name="description" content="TAF-Konvertierung mit Tonies-DB, Cover, Metadaten, Debug-Log und FFmpeg.">
+  <meta name="description" content="TAF-Konvertierung mit Tonies-DB, Cover, Metadaten und FFmpeg direkt im Browser.">
   <link rel="stylesheet" href="./style.css">
   <script type="module" src="./app.js"></script>
 </head>
@@ -26,9 +26,9 @@
       <div>
         <div class="panel upload-zone" id="dropzone" role="button" tabindex="0" aria-label="TAF-Datei auswählen">
           <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <path d="M7 10l5-5 5 5"/>
-            <path d="M12 5v12"/>
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <path d="M7 10l5-5 5 5"></path>
+            <path d="M12 5v12"></path>
           </svg>
           <h2>Datei auswählen</h2>
           <p>Klicken oder Datei hier ablegen</p>
@@ -50,36 +50,44 @@
             </div>
             <span class="badge">Auto-Erkennung</span>
           </div>
+
           <div class="meta-box">
             <label>
               Titel
               <input id="metaTitle" type="text" placeholder="Titel">
             </label>
+
             <label>
               Album / Serie
               <input id="metaAlbum" type="text" placeholder="Album">
             </label>
+
             <label>
               Beschreibung
               <textarea id="metaDesc" placeholder="Beschreibung"></textarea>
             </label>
+
             <div class="grid-2">
               <label>Alter<input id="metaAge" type="text" readonly></label>
               <label>Sprache<input id="metaLanguage" type="text" readonly></label>
             </div>
+
             <div class="grid-2">
               <label>Kategorie<input id="metaCategory" type="text" readonly></label>
               <label>Laufzeit (Minuten)<input id="metaRuntime" type="text" readonly></label>
             </div>
+
             <div class="engine-row">
               <span class="engine-chip" id="engineSourceLabel">CDN ist aktiv</span>
               <span class="engine-chip" id="engineMode">Engine: CDN</span>
               <button id="forceLocalBtn" class="btn" type="button">Lokal-Modus erzwingen</button>
             </div>
+
             <label>
               Trackliste
               <textarea id="metaTracks" readonly placeholder="Trackliste"></textarea>
             </label>
+
             <div id="engineHint" class="note">Warte auf Datei...</div>
             <div id="coverPreview" class="cover-preview" aria-label="Cover-Vorschau"></div>
           </div>
@@ -91,7 +99,7 @@
           <div class="section-header">
             <div>
               <h2>Optionen</h2>
-              <div class="small">FFmpeg wird via toBlobURL geladen. Lokal ist nur nötig, wenn du eigene Assets hosten willst.</div>
+              <div class="small">FFmpeg wird via toBlobURL geladen. Kein lokaler FFmpeg-Ordner nötig.</div>
             </div>
             <span class="badge">Browser-Verarbeitung</span>
           </div>
@@ -105,6 +113,7 @@
                 <option value="opus">OPUS</option>
               </select>
             </label>
+
             <label>
               Bitrate
               <select id="optBitrate">
@@ -124,6 +133,7 @@
                 <option value="no">Nein</option>
               </select>
             </label>
+
             <label>
               CUE erzeugen
               <select id="optCue">
@@ -158,7 +168,9 @@
         </div>
 
         <div class="panel">
-          <div class="section-header"><div><h2>Hinweise</h2></div></div>
+          <div class="section-header">
+            <div><h2>Hinweise</h2></div>
+          </div>
           <ul class="list">
             <li>Wenn <code>SharedArrayBuffer</code> fehlt, nutzt die App den Fallback-Modus.</li>
             <li>Das Cover wird direkt aus der Tonies-DB geladen.</li>
