@@ -4,7 +4,6 @@ import { toBlobURL } from "https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist
 const TONIES_DB_URL = "https://raw.githubusercontent.com/toniebox-reverse-engineering/tonies-json/release/toniesV2.json";
 const HEADER_SIZE = 4096;
 const CORE_BASE = "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm";
-const CORE_MT_BASE = "https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@0.12.4/dist/esm";
 
 const els = {
   status: document.getElementById("status"),
@@ -40,7 +39,6 @@ const els = {
 };
 
 let debugEnabled = true;
-let engineSource = "cdn";
 let currentFile = null;
 let currentCoverBlob = null;
 let currentCoverUrl = null;
@@ -84,21 +82,6 @@ function normalizeText(v) { return (v || "").toString().trim(); }
 function normalizeKey(v) { return normalizeText(v).toLowerCase(); }
 function isMeaningful(v) { return normalizeText(v).length > 0; }
 function safeFileName(name) { return (name || "output").replace(/[\\/?%*:|"<>]/g, "-").trim(); }
-function hasSharedArrayBuffer() { return typeof SharedArrayBuffer !== "undefined"; }
-function hasCrossOriginIsolation() { return window.crossOriginIsolated === true; }
-function supportsWasmThreads() { return hasSharedArrayBuffer() && hasCrossOriginIsolation(); }
-
-function updateEngineUI() {
-  const threadsOk = supportsWasmThreads();
-  const mode = engineSource === "cdn" ? "CDN" : "Lokal";
-  if (els.engineSource) els.engineSource.textContent = mode;
-  if (els.engineSourceLabel) els.engineSourceLabel.textContent = `${mode} ist aktiv`;
-  if (els.engineMode) els.engineMode.textContent = `Engine: ${mode}`;
-  if (els.engineHint) {
-    els.engineHint.textContent = threadsOk ? "Thread-Modus verfuegbar." : "Kein SharedArrayBuffer. Fallback-Modus wird genutzt.";
-  }
-  if (els.status && !currentFile) els.status.textContent = threadsOk ? "Bereit." : "Bereit ohne SharedArrayBuffer.";
-}
 
 async function fetchJson(url) {
   log("INFO", "Fetch JSON", url);
@@ -133,7 +116,6 @@ function flattenToniesDB(data) {
 async function initDb() {
   try {
     if (els.dbStatus) els.dbStatus.textContent = "Lade DB...";
-    log("INFO", "Tonies DB Laden gestartet", TONIES_DB_URL);
     const data = await fetchJson(TONIES_DB_URL);
     flattenToniesDB(data);
     if (els.dbStatus) {
@@ -224,27 +206,18 @@ function showCover(blob) {
     els.coverPreview.style.backgroundImage = `url(${currentCoverUrl})`;
     els.coverPreview.style.display = "block";
   }
-  log("INFO", "Cover angezeigt", { size: blob.size, type: blob.type });
 }
 
 async function ensureFfmpegLoaded() {
   if (ffmpegInstance) return ffmpegInstance;
-
   const ffmpeg = new FFmpeg();
-  const baseURL = supportsWasmThreads() ? CORE_MT_BASE : CORE_BASE;
   const [coreURL, wasmURL] = await Promise.all([
-    toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
-    toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm")
+    toBlobURL(`${CORE_BASE}/ffmpeg-core.js`, "text/javascript"),
+    toBlobURL(`${CORE_BASE}/ffmpeg-core.wasm`, "application/wasm")
   ]);
-
-  const loadOptions = { coreURL, wasmURL };
-  if (supportsWasmThreads()) {
-    loadOptions.workerURL = await toBlobURL(`${baseURL}/ffmpeg-core.worker.js`, "text/javascript");
-  }
-
   ffmpeg.on("log", ({ message }) => log("INFO", `FFmpeg: ${message}`));
-  ffmpeg.on("progress", ({ progress }) => setProgress(Math.round(progress * 100), `Konvertiere: ${Math.round(progress * 100)}%`));
-  await ffmpeg.load(loadOptions);
+  ffmpeg.on("progress", ({ progress }) => setProgress(Math.round(progress * 100), `Konvertiere: ${Math.round(progress * 100)}%`);
+  await ffmpeg.load({ coreURL, wasmURL });
   ffmpegInstance = ffmpeg;
   return ffmpegInstance;
 }
@@ -284,15 +257,6 @@ async function lookupMetadata(hash, filename) {
   if (meta) {
     setStatus("Tonie erkannt!");
     setMetadataFields(meta, filename, hash);
-    log("INFO", "Tonies-DB Metadaten gesetzt", {
-      title: els.metaTitle?.value || "",
-      album: els.metaAlbum?.value || "",
-      descriptionPresent: isMeaningful(els.metaDesc?.value || ""),
-      keys: Object.keys(meta || {}),
-      article: meta?.article || null,
-      image: meta?.image || meta?.pic || null,
-      trackCount: Array.isArray(meta?.["track-desc"]) ? meta["track-desc"].length : 0
-    });
 
     const picUrl = meta.pic || meta.image || meta.cover;
     if (picUrl) {
@@ -317,7 +281,6 @@ async function lookupMetadata(hash, filename) {
   }
 
   setStatus("Bereit zur Konvertierung", "success");
-  updateEngineUI();
 }
 
 async function handleFile(file) {
@@ -353,26 +316,23 @@ async function convertFile() {
     const bitrate = els.optBitrate.value;
     const outFile = `output.${format}`;
     const audioBuffer = await currentFile.slice(HEADER_SIZE).arrayBuffer();
-    const inputName = "input.ogg";
-    await ffmpeg.writeFile(inputName, new Uint8Array(audioBuffer));
 
-    const args = ["-y", "-i", inputName];
+    await ffmpeg.writeFile("input.ogg", new Uint8Array(audioBuffer));
     if (els.optCover.value === "yes" && currentCoverBlob) {
       const coverBytes = new Uint8Array(await currentCoverBlob.arrayBuffer());
       await ffmpeg.writeFile("cover.jpg", coverBytes);
+    }
+
+    const args = ["-y", "-i", "input.ogg"];
+    if (els.optCover.value === "yes" && currentCoverBlob) {
       args.push("-i", "cover.jpg", "-map", "0:a", "-map", "1:v", "-c:v", "mjpeg", "-disposition:v", "attached_pic");
     } else {
       args.push("-map", "0:a");
     }
-
     if (format === "mp3") args.push("-c:a", "libmp3lame", "-b:a", bitrate);
     else if (format === "m4a") args.push("-c:a", "aac", "-b:a", bitrate);
     else args.push("-c:a", "libopus", "-b:a", bitrate);
-
-    args.push("-metadata", `title=${els.metaTitle.value}`);
-    args.push("-metadata", `album=${els.metaAlbum.value}`);
-    args.push("-metadata", `comment=${els.metaDesc.value}`);
-    args.push(outFile);
+    args.push("-metadata", `title=${els.metaTitle.value}`, "-metadata", `album=${els.metaAlbum.value}`, "-metadata", `comment=${els.metaDesc.value}`, outFile);
 
     await ffmpeg.exec(args);
     const data = await ffmpeg.readFile(outFile);
@@ -390,11 +350,7 @@ async function convertFile() {
   } catch (err) {
     const msg = String(err && err.message ? err.message : err);
     log("ERROR", "Konvertierung fehlgeschlagen", { message: msg, stack: err && err.stack ? err.stack : null });
-    if (msg.includes("SharedArrayBuffer") || msg.includes("crossOriginIsolated")) {
-      setStatus("SharedArrayBuffer fehlt. GitHub Pages braucht COOP/COEP oder den Fallback ohne Threads.", "warn");
-    } else {
-      setStatus("Fehler aufgetreten", "error");
-    }
+    setStatus("Fehler aufgetreten", "error");
     setProgress(0, `Fehler: ${msg}`);
   } finally {
     els.convertBtn.disabled = false;
@@ -412,14 +368,8 @@ function bindEvents() {
       els.dropzone.classList.remove("dragover");
       if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
     };
-    els.dropzone.onclick = e => { e.preventDefault(); };
   }
   if (els.convertBtn) els.convertBtn.onclick = convertFile;
-  if (els.forceLocalBtn) els.forceLocalBtn.onclick = () => {
-    engineSource = "local";
-    updateEngineUI();
-    setStatus("Lokal-Modus aktiviert. FFmpeg wird aus CDN geladen, aber ohne lokale Vendor-Files.", "warn");
-  };
   if (els.debugToggle) els.debugToggle.onclick = () => {
     debugEnabled = !debugEnabled;
     if (els.debugLog) els.debugLog.style.display = debugEnabled ? "block" : "none";
@@ -427,7 +377,6 @@ function bindEvents() {
 }
 
 function initDefaults() {
-  updateEngineUI();
   setProgress(0, "Warte auf Eingabe");
   setStatus("Warte auf Datei...");
   if (els.debugLog) els.debugLog.style.display = "block";
@@ -438,12 +387,11 @@ async function init() {
   bindEvents();
   log("INFO", "App gestartet", {
     userAgent: navigator.userAgent,
-    sharedArrayBuffer: hasSharedArrayBuffer(),
-    crossOriginIsolated: hasCrossOriginIsolation(),
+    sharedArrayBuffer: typeof SharedArrayBuffer !== "undefined",
+    crossOriginIsolated: window.crossOriginIsolated === true,
     location: location.href
   });
   await initDb();
-  updateEngineUI();
 }
 
 init();
