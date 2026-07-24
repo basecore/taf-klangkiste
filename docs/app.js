@@ -1,5 +1,6 @@
 const TONIES_DB_URL = "https://raw.githubusercontent.com/toniebox-reverse-engineering/tonies-json/release/toniesV2.json";
 const HEADER_SIZE = 4096;
+const FFMPEG_VERSION = '0.12.15';
 
 const els = {
   status: document.getElementById('status'),
@@ -36,6 +37,13 @@ let currentCoverUrl = null;
 let engineSource = 'cdn';
 let ffmpegInstance = null;
 let debugEnabled = true;
+let toniesLoadedCount = 0;
+let toniesBySeries = {};
+let toniesByEpisode = {};
+let toniesByTitle = {};
+let toniesByArticle = {};
+let toniesByHash = {};
+let toniesByAudioId = {};
 
 function log(level, msg, data = null) {
   if (!debugEnabled) return;
@@ -78,37 +86,53 @@ async function fetchJson(url) {
 }
 
 function normalizeText(v) { return (v || '').toString().trim(); }
+function normalizeKey(v) { return normalizeText(v).toLowerCase(); }
 function isMeaningful(v) { return normalizeText(v).length > 0; }
+
+function flattenToniesData(data) {
+  const entries = Array.isArray(data) ? data : [];
+  entries.forEach(item => {
+    const article = normalizeKey(item?.article);
+    if (article) toniesByArticle[article] = item;
+    if (item && item.data) {
+      item.data.forEach(entry => {
+        const series = normalizeKey(entry?.series);
+        const episode = normalizeKey(entry?.episode);
+        const title = normalizeKey(entry?.title);
+        if (series) toniesBySeries[series] = { ...item, ...entry };
+        if (episode) toniesByEpisode[episode] = { ...item, ...entry };
+        if (title) toniesByTitle[title] = { ...item, ...entry };
+        if (entry && entry.ids) {
+          entry.ids.forEach(idObj => {
+            if (!idObj) return;
+            if (idObj.hash) toniesByHash[idObj.hash.toLowerCase()] = { ...item, ...entry, _id: idObj };
+            if (typeof idObj['audio-id'] !== 'undefined') toniesByAudioId[String(idObj['audio-id'])] = { ...item, ...entry, _id: idObj };
+          });
+        }
+      });
+    }
+  });
+  toniesLoadedCount = Object.keys(toniesByHash).length;
+  toniesDB = toniesByHash;
+}
 
 async function initDb() {
   try {
     if (els.dbStatus) els.dbStatus.textContent = 'Lade DB...';
     log('INFO', 'Tonies DB Laden gestartet', TONIES_DB_URL);
     const data = await fetchJson(TONIES_DB_URL);
-    const entries = Array.isArray(data) ? data : [];
-    entries.forEach(item => {
-      if (item && item.data) {
-        item.data.forEach(entry => {
-          if (entry && entry.ids) {
-            entry.ids.forEach(idObj => {
-              if (idObj && idObj.hash) toniesDB[idObj.hash.toLowerCase()] = entry;
-            });
-          }
-        });
-      }
-    });
-    const count = Object.keys(toniesDB).length;
-    if (els.dbStatus) { els.dbStatus.textContent = `DB geladen (${count} Hashes)`; els.dbStatus.className = 'badge success'; }
-    log('INFO', 'Tonies DB geladen', { count });
+    flattenToniesData(data);
+    if (els.dbStatus) { els.dbStatus.textContent = `DB geladen (${toniesLoadedCount} Hashes)`; els.dbStatus.className = 'badge success'; }
+    log('INFO', 'Tonies DB geladen', { count: toniesLoadedCount, series: Object.keys(toniesBySeries).length, episode: Object.keys(toniesByEpisode).length, title: Object.keys(toniesByTitle).length, article: Object.keys(toniesByArticle).length, audioId: Object.keys(toniesByAudioId).length });
   } catch (err) {
     if (els.dbStatus) els.dbStatus.textContent = 'DB Fehler';
     log('ERROR', 'Tonies DB konnte nicht geladen werden', { message: err.message || String(err) });
   }
 }
 
-function pickFfmpegAssets() {
-  const base = engineSource === 'cdn' ? 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/umd' : './vendor/ffmpeg';
-  return { base, coreURL: `${base}/ffmpeg-core.js`, wasmURL: `${base}/ffmpeg-core.wasm`, workerURL: `${base}/ffmpeg-core.worker.js`, globalURL: `${base}/index.global.js`, indexURL: `${base}/index.js` };
+function ffmpegBaseCandidates() {
+  const cdn = `https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@${FFMPEG_VERSION}/dist/esm`;
+  return engineSource === 'cdn' ? [cdn, './vendor/ffmpeg'] : ['./vendor/ffmpeg', cdn];
 }
 
 async function ensureScript(src) {
@@ -125,17 +149,21 @@ async function ensureScript(src) {
 
 async function loadFfmpegLibrary() {
   if (window.FFmpeg && (window.FFmpeg.createFFmpeg || window.FFmpeg.FFmpeg)) return;
-  const assets = pickFfmpegAssets();
-  const candidates = [assets.globalURL, assets.indexURL];
   let lastErr = null;
-  for (const src of candidates) {
-    try {
-      log('INFO', 'Versuche FFmpeg Library', src);
-      await ensureScript(src);
-      if (window.FFmpeg && (window.FFmpeg.createFFmpeg || window.FFmpeg.FFmpeg)) return;
-    } catch (err) {
-      lastErr = err;
-      log('WARN', 'FFmpeg Library Kandidat fehlgeschlagen', { src, message: err.message || String(err) });
+  for (const base of ffmpegBaseCandidates()) {
+    const candidates = [
+      `${base}/index.js`,
+      `${base}/index.global.js`
+    ];
+    for (const src of candidates) {
+      try {
+        log('INFO', 'Versuche FFmpeg Library', src);
+        await ensureScript(src);
+        if (window.FFmpeg && (window.FFmpeg.createFFmpeg || window.FFmpeg.FFmpeg)) return;
+      } catch (err) {
+        lastErr = err;
+        log('WARN', 'FFmpeg Library Kandidat fehlgeschlagen', { src, message: err.message || String(err) });
+      }
     }
   }
   throw lastErr || new Error('FFmpeg Bibliothek konnte nicht geladen werden.');
@@ -144,8 +172,15 @@ async function loadFfmpegLibrary() {
 async function createFfmpegInstance() {
   if (ffmpegInstance) return ffmpegInstance;
   const api = window.FFmpeg || {};
-  const assets = pickFfmpegAssets();
   const threadsOk = supportsWasmThreads();
+  const cdnBase = `https://cdn.jsdelivr.net/npm/@ffmpeg/core${threadsOk ? '-mt' : ''}@0.12.10/dist/esm`;
+  const localBase = './vendor/ffmpeg';
+  const base = engineSource === 'cdn' ? cdnBase : localBase;
+  const assets = {
+    coreURL: `${base}/ffmpeg-core.js`,
+    wasmURL: `${base}/ffmpeg-core.wasm`,
+    workerURL: `${base}/ffmpeg-core.worker.js`
+  };
   log('INFO', 'FFmpeg Instanz erzeugen', { engineSource, threadsOk, assets });
 
   if (typeof api.createFFmpeg === 'function') {
@@ -189,6 +224,7 @@ function buildGuessDescription(meta, filename, hash) {
   const parts = [];
   if (isMeaningful(meta?.title)) parts.push(`Titel: ${meta.title}`);
   if (isMeaningful(meta?.series)) parts.push(`Serie: ${meta.series}`);
+  if (isMeaningful(meta?.episode)) parts.push(`Episode: ${meta.episode}`);
   if (isMeaningful(meta?.description)) parts.push(meta.description);
   if (isMeaningful(meta?.desc)) parts.push(meta.desc);
   if (!parts.length) parts.push(`Keine Beschreibung in Tonies-DB gefunden fuer ${filename}. Hash: ${hash}`);
@@ -233,8 +269,9 @@ async function handleFile(file) {
 }
 
 async function lookupMetadata(hash, filename) {
-  const meta = toniesDB[hash];
-  log('INFO', 'Metadata Lookup', { hash, found: !!meta });
+  const titleKey = normalizeKey(filename.replace(/\.taf$/i, ''));
+  let meta = toniesDB[hash] || toniesByHash[hash] || toniesByTitle[titleKey] || toniesByEpisode[titleKey] || toniesBySeries[titleKey];
+  log('INFO', 'Metadata Lookup', { hash, titleKey, found: !!meta });
 
   if (currentCoverUrl) {
     URL.revokeObjectURL(currentCoverUrl);
@@ -247,13 +284,13 @@ async function lookupMetadata(hash, filename) {
   if (meta) {
     setStatus('Tonie erkannt!');
     const title = normalizeText(meta.title || meta.episode || filename.replace(/\.taf$/i, ''));
-    const album = normalizeText(meta.series || meta.album || '');
+    const album = normalizeText(meta.series || meta.album || meta.article || '');
     const description = buildGuessDescription(meta, filename, hash);
 
     els.metaTitle.value = title;
     els.metaAlbum.value = album;
     els.metaDesc.value = description;
-    log('INFO', 'Tonies-DB Metadaten gesetzt', { title, album, descriptionPresent: isMeaningful(description) });
+    log('INFO', 'Tonies-DB Metadaten gesetzt', { title, album, descriptionPresent: isMeaningful(description), keys: Object.keys(meta || {}), article: meta?.article || null });
 
     const picUrl = meta.pic || meta.image || meta.cover;
     if (picUrl) {
@@ -269,14 +306,14 @@ async function lookupMetadata(hash, filename) {
         log('WARN', 'Cover-Download fehlgeschlagen', { message: e.message || String(e) });
       }
     } else {
-      log('WARN', 'Kein Cover in Tonies-DB gefunden', { hash });
+      log('WARN', 'Kein Cover in Tonies-DB gefunden', { hash, titleKey });
     }
   } else {
     setStatus('Unbekannter Hash');
     els.metaTitle.value = filename.replace(/\.taf$/i, '');
     els.metaAlbum.value = 'Unbekannt';
     els.metaDesc.value = `Keine Tonies-DB Zuordnung gefunden. Hash: ${hash}`;
-    log('WARN', 'Hash nicht in DB', { hash, filename });
+    log('WARN', 'Hash nicht in DB', { hash, filename, titleKey });
   }
 
   setStatus('Bereit zur Konvertierung');
@@ -301,7 +338,7 @@ async function convertFile() {
   try {
     setProgress(0, 'Initialisiere FFmpeg...');
     setStatus('Pruefe Browser-Faehigkeiten...');
-    log('INFO', 'Konvertierung gestartet', { file: currentFile.name, engineSource, sharedArrayBuffer: hasSharedArrayBuffer(), crossOriginIsolated: hasCrossOriginIsolation() });
+    log('INFO', 'Konvertierung gestartet', { file: currentFile.name, engineSource, sharedArrayBuffer: hasSharedArrayBuffer(), crossOriginIsolated: hasCrossOriginIsolation(), toniesLoadedCount });
 
     const threadsOk = supportsWasmThreads();
     if (!threadsOk) {
@@ -335,6 +372,7 @@ async function convertFile() {
       } else {
         args.push('-map', '0:a');
       }
+      args.push('-threads', threadsOk ? '0' : '1');
       if (format === 'mp3') args.push('-c:a', 'libmp3lame', '-b:a', bitrate);
       else if (format === 'm4a') args.push('-c:a', 'aac', '-b:a', bitrate);
       else args.push('-c:a', 'libopus', '-b:a', bitrate);
@@ -371,6 +409,7 @@ async function convertFile() {
     } else {
       args.push('-map', '0:a');
     }
+    args.push('-threads', threadsOk ? '0' : '1');
     if (format === 'mp3') args.push('-c:a', 'libmp3lame', '-b:a', bitrate);
     else if (format === 'm4a') args.push('-c:a', 'aac', '-b:a', bitrate);
     else args.push('-c:a', 'libopus', '-b:a', bitrate);
