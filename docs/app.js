@@ -1,7 +1,5 @@
 const TONIES_DB_URL = "https://raw.githubusercontent.com/toniebox-reverse-engineering/tonies-json/release/toniesV2.json";
 const HEADER_SIZE = 4096;
-const API_BASE = ".github/actions-api";
-const GITHUB_REPO = "basecore/taf-klangkiste";
 
 const els = {
   status: document.getElementById("status"),
@@ -35,7 +33,13 @@ let currentFile = null;
 let currentCoverBlob = null;
 let currentCoverUrl = null;
 let currentHash = null;
-let currentMeta = null;
+
+let toniesByHash = {};
+let toniesByArticle = {};
+let toniesBySeries = {};
+let toniesByEpisode = {};
+let toniesByTitle = {};
+let toniesByAudioId = {};
 
 function log(level, msg, data = null) {
   if (!debugEnabled) return;
@@ -43,14 +47,16 @@ function log(level, msg, data = null) {
   const line = `[${ts}] [${level}] ${msg}` + (data ? ` ${typeof data === "string" ? data : JSON.stringify(data)}` : "");
   const fn = level === "ERROR" ? console.error : level === "WARN" ? console.warn : console.log;
   fn(line);
-  if (document.getElementById("downloadArea")) {
-    const logBox = document.getElementById("downloadArea");
-    let dbg = document.getElementById("debugLogInline");
-    if (!dbg) { dbg = document.createElement("div"); dbg.id = "debugLogInline"; dbg.className = "debug-box"; logBox.parentElement.appendChild(dbg); }
-    const div = document.createElement("div");
-    div.textContent = line;
-    dbg.prepend(div);
+  let dbg = document.getElementById("debugLogInline");
+  if (!dbg) {
+    dbg = document.createElement("div");
+    dbg.id = "debugLogInline";
+    dbg.className = "debug-box";
+    els.downloadArea.parentElement.appendChild(dbg);
   }
+  const div = document.createElement("div");
+  div.textContent = line;
+  dbg.prepend(div);
 }
 
 function setStatus(text, kind = "") {
@@ -62,11 +68,11 @@ function setStatus(text, kind = "") {
 function setProgress(pct, text) {
   els.progressBar.style.width = `${Math.max(0, Math.min(100, pct))}%`;
   els.progressText.textContent = text;
+  log("DEBUG", text, { pct });
 }
 
 function normalizeText(v) { return (v || "").toString().trim(); }
 function normalizeKey(v) { return normalizeText(v).toLowerCase(); }
-function isMeaningful(v) { return normalizeText(v).length > 0; }
 function safeFileName(name) { return (name || "output").replace(/[\\/?%*:|"<>]/g, "-").trim(); }
 
 async function fetchJson(url) {
@@ -74,8 +80,6 @@ async function fetchJson(url) {
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return await res.json();
 }
-
-let toniesByHash = {}, toniesByArticle = {}, toniesBySeries = {}, toniesByEpisode = {}, toniesByTitle = {}, toniesByAudioId = {};
 
 function flattenToniesDB(data) {
   (Array.isArray(data) ? data : []).forEach(item => {
@@ -143,10 +147,13 @@ function showCover(blob) {
   els.coverPreview.style.display = "block";
 }
 
-function cleanupUploads() {
-  els.downloadArea.innerHTML = "";
-  const old = document.getElementById("workflowMeta");
-  if (old) old.remove();
+async function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(",")[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 }
 
 function injectMetaBlock(obj) {
@@ -155,15 +162,6 @@ function injectMetaBlock(obj) {
   pre.className = "debug-box";
   pre.textContent = JSON.stringify(obj, null, 2);
   els.downloadArea.parentElement.appendChild(pre);
-}
-
-async function fileToBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result).split(",")[1]);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
 }
 
 async function prepareReleasePayload() {
@@ -192,11 +190,6 @@ async function startReleaseWorkflow() {
   setProgress(10, "Bereite Release-Payload vor...");
   const payload = await prepareReleasePayload();
   injectMetaBlock(payload);
-  setProgress(35, "Erzeuge Trigger-Link...");
-  const info = document.createElement("div");
-  info.className = "note";
-  info.innerHTML = `Für die Release-Variante brauchst du eine kleine Upload-Brücke. Lege die Datei lokal als JSON ab und triggert dann per Actions-Workflow. Workflow-Datei siehe <code>.github/workflows/convert-taf-release.yml</code>.`;
-  els.downloadArea.appendChild(info);
   const download = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(download);
@@ -204,8 +197,8 @@ async function startReleaseWorkflow() {
   a.className = "btn primary";
   a.textContent = "Payload herunterladen";
   els.downloadArea.appendChild(a);
-  setProgress(100, "Payload fertig. Release-Workflow starten und Asset hochladen.");
-  setStatus("Release-Payload erstellt", "success");
+  setProgress(100, "Payload fertig.");
+  setStatus("Payload erstellt", "success");
 }
 
 async function handleFile(file) {
@@ -215,16 +208,19 @@ async function handleFile(file) {
   els.convertBtn.disabled = false;
   setProgress(0, "Berechne Hash...");
   setStatus("Datei geladen.");
+
   const slice = file.slice(HEADER_SIZE, HEADER_SIZE + 10 * 1024 * 1024);
   const buffer = await slice.arrayBuffer();
   const hashBuffer = await crypto.subtle.digest("SHA-1", buffer);
   currentHash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
+
   const match = bestDBMatch(file.name, currentHash);
-  currentMeta = match.meta;
   setMetadataFields(match.meta, file.name, currentHash);
+
   if (match.meta?.pic || match.meta?.image || match.meta?.cover) {
-    try { showCover(await loadCoverFromUrl(match.meta.pic || match.meta.image || match.meta.cover)); } catch (e) {}
+    try { showCover(await loadCoverFromUrl(match.meta.pic || match.meta.image || match.meta.cover)); } catch {}
   }
+
   setStatus(match.meta ? "Tonie erkannt!" : "Unbekannter Hash", match.meta ? "success" : "warn");
   setStatus("Bereit für Release-Upload", "success");
 }
@@ -234,7 +230,11 @@ function bindEvents() {
   els.fileInput.onchange = e => handleFile(e.target.files[0]);
   els.dropzone.ondragover = e => { e.preventDefault(); els.dropzone.classList.add("dragover"); };
   els.dropzone.ondragleave = () => els.dropzone.classList.remove("dragover");
-  els.dropzone.ondrop = e => { e.preventDefault(); els.dropzone.classList.remove("dragover"); if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]); };
+  els.dropzone.ondrop = e => {
+    e.preventDefault();
+    els.dropzone.classList.remove("dragover");
+    if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+  };
   els.convertBtn.onclick = startReleaseWorkflow;
   els.debugToggle.onclick = () => { debugEnabled = !debugEnabled; document.getElementById("debugLogInline")?.classList.toggle("hidden", !debugEnabled); };
 }
@@ -249,7 +249,7 @@ async function init() {
     flattenToniesDB(db);
     els.dbStatus.textContent = `DB geladen (${Object.keys(toniesByHash).length} Hashes)`;
     els.dbStatus.className = "badge success";
-  } catch (e) {
+  } catch {
     els.dbStatus.textContent = "DB Fehler";
   }
 }
