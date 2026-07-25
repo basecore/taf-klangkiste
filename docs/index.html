@@ -15,6 +15,7 @@
         <p class="eyebrow">Client-Side WebApp</p>
         <h1>TAF Klangkiste PRO</h1>
         <p class="lead">TAF-Datei importieren, Tonies-Metadaten anzeigen, Cover einbetten und direkt im Browser konvertieren.</p>
+        <p class="repo-links"><a href="https://github.com/basecore/taf-klangkiste" target="_blank" rel="noopener noreferrer">GitHub Projekt</a> · <a href="https://github.com/basecore/taf-klangkiste/issues" target="_blank" rel="noopener noreferrer">Issues</a></p>
       </div>
       <div class="top-actions">
         <div id="status" class="status">Warte auf Eingabe</div>
@@ -32,14 +33,12 @@
           </svg>
           <h2>Datei auswählen</h2>
           <p>Klicken oder Datei hier ablegen</p>
-          <div class="control-row" style="justify-content:center; margin-top: 14px;">
+          <div class="control-row">
             <button id="pickBtn" class="btn primary" type="button">TAF-Datei auswählen</button>
             <input id="fileInput" type="file" accept=".taf" class="hidden">
           </div>
           <div id="fileName" class="file-name">Keine TAF geladen.</div>
-          <div style="margin-top:12px;">
-            <span id="dbStatus" class="badge">Tonies-DB wird geladen...</span>
-          </div>
+          <div style="margin-top:12px;"><span id="dbStatus" class="badge">Tonies-DB wird geladen...</span></div>
         </div>
 
         <div class="panel">
@@ -50,44 +49,24 @@
             </div>
             <span class="badge">Auto-Erkennung</span>
           </div>
-
           <div class="meta-box">
-            <label>
-              Titel
-              <input id="metaTitle" type="text" placeholder="Titel">
-            </label>
-
-            <label>
-              Album / Serie
-              <input id="metaAlbum" type="text" placeholder="Album">
-            </label>
-
-            <label>
-              Beschreibung
-              <textarea id="metaDesc" placeholder="Beschreibung"></textarea>
-            </label>
-
+            <label>Titel<input id="metaTitle" type="text" placeholder="Titel"></label>
+            <label>Album / Serie<input id="metaAlbum" type="text" placeholder="Album"></label>
+            <label>Beschreibung<textarea id="metaDesc" placeholder="Beschreibung"></textarea></label>
             <div class="grid-2">
               <label>Alter<input id="metaAge" type="text" readonly></label>
               <label>Sprache<input id="metaLanguage" type="text" readonly></label>
             </div>
-
             <div class="grid-2">
               <label>Kategorie<input id="metaCategory" type="text" readonly></label>
               <label>Laufzeit (Minuten)<input id="metaRuntime" type="text" readonly></label>
             </div>
-
             <div class="engine-row">
               <span class="engine-chip" id="engineSourceLabel">CDN ist aktiv</span>
               <span class="engine-chip" id="engineMode">Engine: CDN</span>
               <button id="forceLocalBtn" class="btn" type="button">Lokal-Modus erzwingen</button>
             </div>
-
-            <label>
-              Trackliste
-              <textarea id="metaTracks" readonly placeholder="Trackliste"></textarea>
-            </label>
-
+            <label>Trackliste<textarea id="metaTracks" readonly placeholder="Trackliste"></textarea></label>
             <div id="engineHint" class="note">Warte auf Datei...</div>
             <div id="coverPreview" class="cover-preview" aria-label="Cover-Vorschau"></div>
           </div>
@@ -103,74 +82,25 @@
             </div>
             <span class="badge">Browser-Verarbeitung</span>
           </div>
-
           <div class="grid-2">
-            <label>
-              Ausgabeformat
-              <select id="optFormat">
-                <option value="mp3">MP3</option>
-                <option value="m4a">M4A</option>
-                <option value="opus">OPUS</option>
-              </select>
-            </label>
-
-            <label>
-              Bitrate
-              <select id="optBitrate">
-                <option value="96k">96k</option>
-                <option value="128k" selected>128k</option>
-                <option value="160k">160k</option>
-                <option value="192k">192k</option>
-              </select>
-            </label>
+            <label>Ausgabeformat<select id="optFormat"><option value="mp3">MP3</option><option value="m4a">M4A</option><option value="opus">OPUS</option></select></label>
+            <label>Bitrate<select id="optBitrate"><option value="96k">96k</option><option value="128k" selected>128k</option><option value="160k">160k</option><option value="192k">192k</option></select></label>
           </div>
-
           <div class="grid-2" style="margin-top: 16px;">
-            <label>
-              Cover einbetten
-              <select id="optCover">
-                <option value="yes" selected>Ja</option>
-                <option value="no">Nein</option>
-              </select>
-            </label>
-
-            <label>
-              CUE erzeugen
-              <select id="optCue">
-                <option value="yes" selected>Ja</option>
-                <option value="no">Nein</option>
-              </select>
-            </label>
+            <label>Cover einbetten<select id="optCover"><option value="yes" selected>Ja</option><option value="no">Nein</option></select></label>
+            <label>CUE erzeugen<select id="optCue"><option value="yes" selected>Ja</option><option value="no">Nein</option></select></label>
           </div>
-
-          <div style="margin-top: 18px;">
-            <button id="convertBtn" class="btn primary large" type="button" disabled>Konvertierung starten</button>
-          </div>
-
-          <div class="progress-wrap">
-            <div class="progress"><div id="progressBar" class="bar"></div></div>
-            <div id="progressText" class="progress-text">Warte auf Datei...</div>
-          </div>
-
+          <div style="margin-top: 18px;"><button id="convertBtn" class="btn primary large" type="button" disabled>Konvertierung starten</button></div>
+          <div class="progress-wrap"><div class="progress"><div id="progressBar" class="bar"></div></div><div id="progressText" class="progress-text">Warte auf Datei...</div></div>
           <div id="downloadArea" class="download-area"></div>
         </div>
-
         <div class="panel">
-          <div class="section-header">
-            <div>
-              <h2>Debug-Log</h2>
-              <div class="small">Zeigt DB-Laden, Hash-Lookup, Cover-Fetch, FFmpeg-Setup und Fehlerdetails.</div>
-            </div>
-            <span class="badge">Verbose</span>
-          </div>
+          <div class="section-header"><div><h2>Debug-Log</h2><div class="small">Zeigt DB-Laden, Hash-Lookup, Cover-Fetch, FFmpeg-Setup und Fehlerdetails.</div></div><span class="badge">Verbose</span></div>
           <div class="note">Wenn die Tonies-DB keine Beschreibung liefert, wird ein Fallback gesetzt und im Log vermerkt.</div>
           <div id="debugLog" class="debug-box"></div>
         </div>
-
         <div class="panel">
-          <div class="section-header">
-            <div><h2>Hinweise</h2></div>
-          </div>
+          <div class="section-header"><div><h2>Hinweise</h2></div></div>
           <ul class="list">
             <li>Wenn <code>SharedArrayBuffer</code> fehlt, nutzt die App den Fallback-Modus.</li>
             <li>Das Cover wird direkt aus der Tonies-DB geladen.</li>
