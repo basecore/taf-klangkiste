@@ -45,6 +45,7 @@ let currentFile = null;
 let currentCoverBlob = null;
 let currentCoverUrl = null;
 let ffmpegInstance = null;
+let ffmpegReady = false;
 let toniesLoadedCount = 0;
 
 let toniesByHash = {};
@@ -143,15 +144,9 @@ function bestDBMatch(filename, hash) {
   const titleKey = normalizeKey(filename.replace(/\.taf$/i, ""));
   let meta = toniesByHash[hash] || toniesByTitle[titleKey] || toniesByEpisode[titleKey] || toniesBySeries[titleKey] || toniesByArticle[titleKey];
   if (meta) return { meta, titleKey, source: "direct" };
-  for (const [k, v] of Object.entries(toniesBySeries)) {
-    if (titleKey.includes(k) || k.includes(titleKey)) return { meta: v, titleKey, source: "series-fuzzy" };
-  }
-  for (const [k, v] of Object.entries(toniesByEpisode)) {
-    if (titleKey.includes(k) || k.includes(titleKey)) return { meta: v, titleKey, source: "episode-fuzzy" };
-  }
-  for (const [k, v] of Object.entries(toniesByTitle)) {
-    if (titleKey.includes(k) || k.includes(titleKey)) return { meta: v, titleKey, source: "title-fuzzy" };
-  }
+  for (const [k, v] of Object.entries(toniesBySeries)) if (titleKey.includes(k) || k.includes(titleKey)) return { meta: v, titleKey, source: "series-fuzzy" };
+  for (const [k, v] of Object.entries(toniesByEpisode)) if (titleKey.includes(k) || k.includes(titleKey)) return { meta: v, titleKey, source: "episode-fuzzy" };
+  for (const [k, v] of Object.entries(toniesByTitle)) if (titleKey.includes(k) || k.includes(titleKey)) return { meta: v, titleKey, source: "title-fuzzy" };
   return { meta: null, titleKey, source: "none" };
 }
 
@@ -212,7 +207,7 @@ function showCover(blob) {
 }
 
 async function ensureFfmpegLoaded() {
-  if (ffmpegInstance) return ffmpegInstance;
+  if (ffmpegReady && ffmpegInstance) return ffmpegInstance;
   const ffmpeg = new FFmpeg();
   const [coreURL, wasmURL] = await Promise.all([
     toBlobURL(`${CORE_BASE}/ffmpeg-core.js`, "text/javascript"),
@@ -220,8 +215,15 @@ async function ensureFfmpegLoaded() {
   ]);
   ffmpeg.on("log", ({ message }) => log("INFO", `FFmpeg: ${message}`));
   ffmpeg.on("progress", ({ progress }) => setProgress(Math.round(progress * 100), `Konvertiere: ${Math.round(progress * 100)}%`));
-  await ffmpeg.load({ coreURL, wasmURL });
+  try {
+    await ffmpeg.load({ coreURL, wasmURL });
+  } catch (e) {
+    ffmpegReady = false;
+    ffmpegInstance = null;
+    throw new Error("FFmpeg konnte nicht geladen werden. Die Konvertierung ist auf diesem Host deaktiviert.");
+  }
   ffmpegInstance = ffmpeg;
+  ffmpegReady = true;
   return ffmpegInstance;
 }
 
@@ -353,10 +355,9 @@ async function convertFile() {
     setProgress(100, "Erfolgreich abgeschlossen.");
     setStatus("Fertiggestellt!", "success");
   } catch (err) {
-    const msg = String(err && err.message ? err.message : err);
-    log("ERROR", "Konvertierung fehlgeschlagen", { message: msg, stack: err && err.stack ? err.stack : null });
-    setStatus("Fehler aufgetreten", "error");
-    setProgress(0, `Fehler: ${msg}`);
+    log("WARN", "Konvertierung nicht verfuegbar", { message: String(err) });
+    setStatus("Konvertierung nicht verfuegbar", "warn");
+    setProgress(0, "Fallback aktiv: FFmpeg konnte auf diesem Host nicht geladen werden.");
   } finally {
     els.convertBtn.disabled = false;
   }
@@ -364,7 +365,7 @@ async function convertFile() {
 
 function bindEvents() {
   if (els.pickBtn) els.pickBtn.onclick = () => els.fileInput.click();
-  if (els.forceLocalBtn) els.forceLocalBtn.onclick = () => setStatus("Lokal-Modus ist in dieser GitHub-Pages-Version nicht erforderlich.", "success");
+  if (els.forceLocalBtn) els.forceLocalBtn.onclick = () => setStatus("Fallback aktiv: Konvertierung ist auf diesem Host nicht verfügbar.", "warn");
   if (els.fileInput) els.fileInput.onchange = e => handleFile(e.target.files[0]);
   if (els.dropzone) {
     els.dropzone.ondragover = e => { e.preventDefault(); els.dropzone.classList.add("dragover"); };
@@ -386,6 +387,8 @@ function initDefaults() {
   setProgress(0, "Warte auf Eingabe");
   setStatus("Warte auf Datei...");
   if (els.debugLog) els.debugLog.style.display = "block";
+  if (els.engineSourceLabel) els.engineSourceLabel.textContent = "FFmpeg Fallback";
+  if (els.engineMode) els.engineMode.textContent = "Engine: Fallback";
 }
 
 async function init() {
