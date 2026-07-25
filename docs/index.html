@@ -62,9 +62,9 @@
               <label>Laufzeit (Minuten)<input id="metaRuntime" type="text" readonly></label>
             </div>
             <div class="engine-row">
-              <span class="engine-chip" id="engineSourceLabel">CDN ist aktiv</span>
-              <span class="engine-chip" id="engineMode">Engine: CDN</span>
-              <button id="forceLocalBtn" class="btn" type="button">Lokal-Modus erzwingen</button>
+              <span class="engine-chip" id="engineSourceLabel">FFmpeg Fallback</span>
+              <span class="engine-chip" id="engineMode">Engine: Fallback</span>
+              <button id="forceLocalBtn" class="btn" type="button">Fallback anzeigen</button>
             </div>
             <label>Trackliste<textarea id="metaTracks" readonly placeholder="Trackliste"></textarea></label>
             <div id="engineHint" class="note">Warte auf Datei...</div>
@@ -78,7 +78,7 @@
           <div class="section-header">
             <div>
               <h2>Optionen</h2>
-              <div class="small">FFmpeg wird via toBlobURL geladen. Kein lokaler FFmpeg-Ordner nötig.</div>
+              <div class="small">Wenn FFmpeg nicht lädt, bleibt die App im Fallback-Modus.</div>
             </div>
             <span class="badge">Browser-Verarbeitung</span>
           </div>
@@ -95,17 +95,17 @@
           <div id="downloadArea" class="download-area"></div>
         </div>
         <div class="panel">
-          <div class="section-header"><div><h2>Debug-Log</h2><div class="small">Zeigt DB-Laden, Hash-Lookup, Cover-Fetch, FFmpeg-Setup und Fehlerdetails.</div></div><span class="badge">Verbose</span></div>
-          <div class="note">Wenn die Tonies-DB keine Beschreibung liefert, wird ein Fallback gesetzt und im Log vermerkt.</div>
+          <div class="section-header"><div><h2>Debug-Log</h2><div class="small">Zeigt DB-Laden, Hash-Lookup, Cover-Fetch und Fallback-Hinweise.</div></div><span class="badge">Verbose</span></div>
+          <div class="note">Wenn FFmpeg im Browser nicht geladen werden kann, wechselt die App automatisch in den Fallback-Modus.</div>
           <div id="debugLog" class="debug-box"></div>
         </div>
         <div class="panel">
           <div class="section-header"><div><h2>Hinweise</h2></div></div>
           <ul class="list">
-            <li>Wenn <code>SharedArrayBuffer</code> fehlt, nutzt die App den Fallback-Modus.</li>
+            <li>Wenn <code>SharedArrayBuffer</code> fehlt, bleibt nur der Fallback-Modus.</li>
             <li>Das Cover wird direkt aus der Tonies-DB geladen.</li>
             <li>Für GitHub Pages ist <code>docs/</code> als Publish-Root sinnvoll.</li>
-            <li>FFmpeg läuft hier ohne lokalen Proxy über <code>toBlobURL()</code>.</li>
+            <li>Der Fallback benötigt keinen lokalen FFmpeg-Ordner.</li>
           </ul>
         </div>
       </div>
