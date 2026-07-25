@@ -1,11 +1,7 @@
-import { FFmpeg } from "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/esm/index.js";
-import { toBlobURL } from "https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js";
-
 const TONIES_DB_URL = "https://raw.githubusercontent.com/toniebox-reverse-engineering/tonies-json/release/toniesV2.json";
 const HEADER_SIZE = 4096;
-const CORE_BASE = "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm";
-const GITHUB_REPO_URL = "https://github.com/basecore/taf-klangkiste";
-const GITHUB_ISSUES_URL = "https://github.com/basecore/taf-klangkiste/issues";
+const API_BASE = ".github/actions-api";
+const GITHUB_REPO = "basecore/taf-klangkiste";
 
 const els = {
   status: document.getElementById("status"),
@@ -31,29 +27,15 @@ const els = {
   optBitrate: document.getElementById("optBitrate"),
   optCover: document.getElementById("optCover"),
   optCue: document.getElementById("optCue"),
-  engineMode: document.getElementById("engineMode"),
-  engineHint: document.getElementById("engineHint"),
-  engineSource: document.getElementById("engineSource"),
-  engineSourceLabel: document.getElementById("engineSourceLabel"),
-  forceLocalBtn: document.getElementById("forceLocalBtn"),
-  debugToggle: document.getElementById("debugToggle"),
-  debugLog: document.getElementById("debugLog")
+  debugToggle: document.getElementById("debugToggle")
 };
 
 let debugEnabled = true;
 let currentFile = null;
 let currentCoverBlob = null;
 let currentCoverUrl = null;
-let ffmpegInstance = null;
-let ffmpegReady = false;
-let toniesLoadedCount = 0;
-
-let toniesByHash = {};
-let toniesByArticle = {};
-let toniesBySeries = {};
-let toniesByEpisode = {};
-let toniesByTitle = {};
-let toniesByAudioId = {};
+let currentHash = null;
+let currentMeta = null;
 
 function log(level, msg, data = null) {
   if (!debugEnabled) return;
@@ -61,25 +43,25 @@ function log(level, msg, data = null) {
   const line = `[${ts}] [${level}] ${msg}` + (data ? ` ${typeof data === "string" ? data : JSON.stringify(data)}` : "");
   const fn = level === "ERROR" ? console.error : level === "WARN" ? console.warn : console.log;
   fn(line);
-  if (els.debugLog) {
+  if (document.getElementById("downloadArea")) {
+    const logBox = document.getElementById("downloadArea");
+    let dbg = document.getElementById("debugLogInline");
+    if (!dbg) { dbg = document.createElement("div"); dbg.id = "debugLogInline"; dbg.className = "debug-box"; logBox.parentElement.appendChild(dbg); }
     const div = document.createElement("div");
     div.textContent = line;
-    els.debugLog.prepend(div);
+    dbg.prepend(div);
   }
 }
 
 function setStatus(text, kind = "") {
-  if (!els.status) return;
   els.status.textContent = text;
   els.status.className = kind ? `status ${kind}` : "status";
-  if (els.engineHint) els.engineHint.textContent = text;
   log("INFO", text);
 }
 
 function setProgress(pct, text) {
-  if (els.progressBar) els.progressBar.style.width = `${Math.max(0, Math.min(100, pct))}%`;
-  if (els.progressText) els.progressText.textContent = text;
-  log("DEBUG", text, { pct });
+  els.progressBar.style.width = `${Math.max(0, Math.min(100, pct))}%`;
+  els.progressText.textContent = text;
 }
 
 function normalizeText(v) { return (v || "").toString().trim(); }
@@ -88,18 +70,18 @@ function isMeaningful(v) { return normalizeText(v).length > 0; }
 function safeFileName(name) { return (name || "output").replace(/[\\/?%*:|"<>]/g, "-").trim(); }
 
 async function fetchJson(url) {
-  log("INFO", "Fetch JSON", url);
   const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return await res.json();
 }
 
+let toniesByHash = {}, toniesByArticle = {}, toniesBySeries = {}, toniesByEpisode = {}, toniesByTitle = {}, toniesByAudioId = {};
+
 function flattenToniesDB(data) {
-  const items = Array.isArray(data) ? data : [];
-  items.forEach(item => {
+  (Array.isArray(data) ? data : []).forEach(item => {
     const article = normalizeKey(item?.article);
     if (article) toniesByArticle[article] = item;
-    if (!item?.data || !Array.isArray(item.data)) return;
+    if (!Array.isArray(item?.data)) return;
     item.data.forEach(entry => {
       const series = normalizeKey(entry?.series);
       const episode = normalizeKey(entry?.episode);
@@ -114,51 +96,12 @@ function flattenToniesDB(data) {
       });
     });
   });
-  toniesLoadedCount = Object.keys(toniesByHash).length;
-}
-
-async function initDb() {
-  try {
-    if (els.dbStatus) els.dbStatus.textContent = "Lade DB...";
-    const data = await fetchJson(TONIES_DB_URL);
-    flattenToniesDB(data);
-    if (els.dbStatus) {
-      els.dbStatus.textContent = `DB geladen (${toniesLoadedCount} Hashes)`;
-      els.dbStatus.className = "badge success";
-    }
-    log("INFO", "Tonies DB geladen", {
-      count: toniesLoadedCount,
-      article: Object.keys(toniesByArticle).length,
-      series: Object.keys(toniesBySeries).length,
-      episode: Object.keys(toniesByEpisode).length,
-      title: Object.keys(toniesByTitle).length,
-      audioId: Object.keys(toniesByAudioId).length
-    });
-  } catch (err) {
-    if (els.dbStatus) els.dbStatus.textContent = "DB Fehler";
-    log("ERROR", "Tonies DB konnte nicht geladen werden", { message: err.message || String(err) });
-  }
 }
 
 function bestDBMatch(filename, hash) {
   const titleKey = normalizeKey(filename.replace(/\.taf$/i, ""));
-  let meta = toniesByHash[hash] || toniesByTitle[titleKey] || toniesByEpisode[titleKey] || toniesBySeries[titleKey] || toniesByArticle[titleKey];
-  if (meta) return { meta, titleKey, source: "direct" };
-  for (const [k, v] of Object.entries(toniesBySeries)) if (titleKey.includes(k) || k.includes(titleKey)) return { meta: v, titleKey, source: "series-fuzzy" };
-  for (const [k, v] of Object.entries(toniesByEpisode)) if (titleKey.includes(k) || k.includes(titleKey)) return { meta: v, titleKey, source: "episode-fuzzy" };
-  for (const [k, v] of Object.entries(toniesByTitle)) if (titleKey.includes(k) || k.includes(titleKey)) return { meta: v, titleKey, source: "title-fuzzy" };
-  return { meta: null, titleKey, source: "none" };
-}
-
-function buildGuessDescription(meta, filename, hash) {
-  const parts = [];
-  if (isMeaningful(meta?.title)) parts.push(`Titel: ${meta.title}`);
-  if (isMeaningful(meta?.series)) parts.push(`Serie: ${meta.series}`);
-  if (isMeaningful(meta?.episode)) parts.push(`Episode: ${meta.episode}`);
-  if (isMeaningful(meta?.description)) parts.push(meta.description);
-  if (isMeaningful(meta?.desc)) parts.push(meta.desc);
-  if (!parts.length) parts.push(`Keine Beschreibung in Tonies-DB gefunden fuer ${filename}. Hash: ${hash}`);
-  return parts.join("\n\n");
+  const meta = toniesByHash[hash] || toniesByTitle[titleKey] || toniesByEpisode[titleKey] || toniesBySeries[titleKey] || toniesByArticle[titleKey];
+  return { meta: meta || null, titleKey };
 }
 
 function minutesFromRuntime(v) {
@@ -167,124 +110,102 @@ function minutesFromRuntime(v) {
   return `${(n / 60).toFixed(1).replace(/\.0$/, "")} Minuten`;
 }
 
-function joinTracks(meta) {
-  const tracks = meta?.["track-desc"] || meta?.tracks || [];
-  if (!Array.isArray(tracks) || !tracks.length) return "";
-  return tracks.map((t, i) => `${i + 1}. ${t}`).join("\n");
-}
-
 function setMetadataFields(meta, filename, hash) {
-  const title = normalizeText(meta?.title || meta?.episode || filename.replace(/\.taf$/i, ""));
-  const album = normalizeText(meta?.series || meta?.album || meta?.article || "");
-  const description = buildGuessDescription(meta, filename, hash);
-  if (els.metaTitle) els.metaTitle.value = title;
-  if (els.metaAlbum) els.metaAlbum.value = album;
-  if (els.metaDesc) els.metaDesc.value = description;
-  if (els.metaAge) els.metaAge.value = meta?.age ? `${meta.age} Jahre` : "";
-  if (els.metaLanguage) els.metaLanguage.value = normalizeText(meta?.language || "");
-  if (els.metaCategory) els.metaCategory.value = normalizeText(meta?.category || "");
-  if (els.metaRuntime) els.metaRuntime.value = minutesFromRuntime(meta?.runtime);
-  if (els.metaTracks) els.metaTracks.value = joinTracks(meta);
+  if (!meta) {
+    els.metaTitle.value = filename.replace(/\.taf$/i, "");
+    els.metaAlbum.value = "Unbekannt";
+    els.metaDesc.value = `Keine Tonies-DB Zuordnung gefunden. Hash: ${hash}`;
+    els.metaAge.value = els.metaLanguage.value = els.metaCategory.value = els.metaRuntime.value = els.metaTracks.value = "";
+    return;
+  }
+  els.metaTitle.value = normalizeText(meta?.title || meta?.episode || filename.replace(/\.taf$/i, ""));
+  els.metaAlbum.value = normalizeText(meta?.series || meta?.album || meta?.article || "");
+  els.metaDesc.value = normalizeText(meta?.description || meta?.desc || "");
+  els.metaAge.value = meta?.age ? `${meta.age} Jahre` : "";
+  els.metaLanguage.value = normalizeText(meta?.language || "");
+  els.metaCategory.value = normalizeText(meta?.category || "");
+  els.metaRuntime.value = minutesFromRuntime(meta?.runtime);
+  const tracks = meta?.["track-desc"] || meta?.tracks || [];
+  els.metaTracks.value = Array.isArray(tracks) ? tracks.map((t, i) => `${i + 1}. ${t}`).join("\n") : "";
 }
 
 async function loadCoverFromUrl(url) {
-  if (!url) return null;
-  log("INFO", "Lade Cover", { url });
   const res = await fetch(url, { mode: "cors", cache: "no-store" });
   if (!res.ok) throw new Error(`Cover HTTP ${res.status}`);
   return await res.blob();
 }
 
 function showCover(blob) {
-  if (!blob) return;
   if (currentCoverUrl) URL.revokeObjectURL(currentCoverUrl);
   currentCoverBlob = blob;
   currentCoverUrl = URL.createObjectURL(blob);
-  if (els.coverPreview) {
-    els.coverPreview.style.backgroundImage = `url(${currentCoverUrl})`;
-    els.coverPreview.style.display = "block";
-  }
+  els.coverPreview.style.backgroundImage = `url(${currentCoverUrl})`;
+  els.coverPreview.style.display = "block";
 }
 
-async function ensureFfmpegLoaded() {
-  if (ffmpegReady && ffmpegInstance) return ffmpegInstance;
-  const ffmpeg = new FFmpeg();
-  const [coreURL, wasmURL] = await Promise.all([
-    toBlobURL(`${CORE_BASE}/ffmpeg-core.js`, "text/javascript"),
-    toBlobURL(`${CORE_BASE}/ffmpeg-core.wasm`, "application/wasm")
-  ]);
-  ffmpeg.on("log", ({ message }) => log("INFO", `FFmpeg: ${message}`));
-  ffmpeg.on("progress", ({ progress }) => setProgress(Math.round(progress * 100), `Konvertiere: ${Math.round(progress * 100)}%`));
-  try {
-    await ffmpeg.load({ coreURL, wasmURL });
-  } catch (e) {
-    ffmpegReady = false;
-    ffmpegInstance = null;
-    throw new Error("FFmpeg konnte nicht geladen werden. Die Konvertierung ist auf diesem Host deaktiviert.");
-  }
-  ffmpegInstance = ffmpeg;
-  ffmpegReady = true;
-  return ffmpegInstance;
+function cleanupUploads() {
+  els.downloadArea.innerHTML = "";
+  const old = document.getElementById("workflowMeta");
+  if (old) old.remove();
 }
 
-function renderDownload(blob, filename, text) {
-  const url = URL.createObjectURL(blob);
+function injectMetaBlock(obj) {
+  const pre = document.createElement("pre");
+  pre.id = "workflowMeta";
+  pre.className = "debug-box";
+  pre.textContent = JSON.stringify(obj, null, 2);
+  els.downloadArea.parentElement.appendChild(pre);
+}
+
+async function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(",")[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function prepareReleasePayload() {
+  return {
+    filename: currentFile.name,
+    hash: currentHash,
+    title: els.metaTitle.value,
+    album: els.metaAlbum.value,
+    description: els.metaDesc.value,
+    age: els.metaAge.value,
+    language: els.metaLanguage.value,
+    category: els.metaCategory.value,
+    runtime: els.metaRuntime.value,
+    tracks: els.metaTracks.value,
+    format: els.optFormat.value,
+    bitrate: els.optBitrate.value,
+    cover: els.optCover.value,
+    cue: els.optCue.value,
+    base64: await fileToBase64(currentFile),
+    source: "gitHub-actions-release"
+  };
+}
+
+async function startReleaseWorkflow() {
+  if (!currentFile) return;
+  setProgress(10, "Bereite Release-Payload vor...");
+  const payload = await prepareReleasePayload();
+  injectMetaBlock(payload);
+  setProgress(35, "Erzeuge Trigger-Link...");
+  const info = document.createElement("div");
+  info.className = "note";
+  info.innerHTML = `Für die Release-Variante brauchst du eine kleine Upload-Brücke. Lege die Datei lokal als JSON ab und triggert dann per Actions-Workflow. Workflow-Datei siehe <code>.github/workflows/convert-taf-release.yml</code>.`;
+  els.downloadArea.appendChild(info);
+  const download = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
   const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
+  a.href = URL.createObjectURL(download);
+  a.download = safeFileName(currentFile.name.replace(/\.taf$/i, "")) + ".release.json";
   a.className = "btn primary";
-  a.textContent = text;
-  a.onclick = () => setTimeout(() => URL.revokeObjectURL(url), 1500);
+  a.textContent = "Payload herunterladen";
   els.downloadArea.appendChild(a);
-}
-
-async function buildCueText() {
-  const title = normalizeText(els.metaTitle?.value || "");
-  const album = normalizeText(els.metaAlbum?.value || "");
-  return `REM GENERATED BY TAF KLANGKISTE\nTITLE "${title}"\nPERFORMER "${album}"\nFILE "output" ${String(els.optFormat.value || "mp3").toUpperCase()}\n  TRACK 01 AUDIO\n    TITLE "Kapitel 1"\n    INDEX 01 00:00:00\n`;
-}
-
-async function lookupMetadata(hash, filename) {
-  const match = bestDBMatch(filename, hash);
-  const meta = match.meta;
-  log("INFO", "Metadata Lookup", { hash, filename, titleKey: match.titleKey, source: match.source, found: !!meta });
-
-  if (currentCoverUrl) {
-    URL.revokeObjectURL(currentCoverUrl);
-    currentCoverUrl = null;
-  }
-  currentCoverBlob = null;
-  if (els.coverPreview) {
-    els.coverPreview.style.display = "none";
-    els.coverPreview.style.backgroundImage = "";
-  }
-
-  if (meta) {
-    setStatus("Tonie erkannt!");
-    setMetadataFields(meta, filename, hash);
-    const picUrl = meta.pic || meta.image || meta.cover;
-    if (picUrl) {
-      try {
-        setStatus("Lade Cover aus Tonies-DB...");
-        const blob = await loadCoverFromUrl(picUrl);
-        if (blob) showCover(blob);
-      } catch (e) {
-        log("WARN", "Cover-Download fehlgeschlagen", { message: e.message || String(e), picUrl });
-      }
-    }
-  } else {
-    setStatus("Unbekannter Hash", "warn");
-    if (els.metaTitle) els.metaTitle.value = filename.replace(/\.taf$/i, "");
-    if (els.metaAlbum) els.metaAlbum.value = "Unbekannt";
-    if (els.metaDesc) els.metaDesc.value = `Keine Tonies-DB Zuordnung gefunden. Hash: ${hash}`;
-    if (els.metaAge) els.metaAge.value = "";
-    if (els.metaLanguage) els.metaLanguage.value = "";
-    if (els.metaCategory) els.metaCategory.value = "";
-    if (els.metaRuntime) els.metaRuntime.value = "";
-    if (els.metaTracks) els.metaTracks.value = "";
-  }
-
-  setStatus("Bereit zur Konvertierung", "success");
+  setProgress(100, "Payload fertig. Release-Workflow starten und Asset hochladen.");
+  setStatus("Release-Payload erstellt", "success");
 }
 
 async function handleFile(file) {
@@ -294,113 +215,42 @@ async function handleFile(file) {
   els.convertBtn.disabled = false;
   setProgress(0, "Berechne Hash...");
   setStatus("Datei geladen.");
-
   const slice = file.slice(HEADER_SIZE, HEADER_SIZE + 10 * 1024 * 1024);
   const buffer = await slice.arrayBuffer();
   const hashBuffer = await crypto.subtle.digest("SHA-1", buffer);
-  const currentHash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
-  await lookupMetadata(currentHash, file.name);
-}
-
-async function convertFile() {
-  if (!currentFile) {
-    setStatus("Bitte zuerst eine TAF-Datei auswählen.", "warn");
-    return;
+  currentHash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
+  const match = bestDBMatch(file.name, currentHash);
+  currentMeta = match.meta;
+  setMetadataFields(match.meta, file.name, currentHash);
+  if (match.meta?.pic || match.meta?.image || match.meta?.cover) {
+    try { showCover(await loadCoverFromUrl(match.meta.pic || match.meta.image || match.meta.cover)); } catch (e) {}
   }
-
-  els.convertBtn.disabled = true;
-  els.downloadArea.innerHTML = "";
-
-  try {
-    setProgress(0, "Initialisiere FFmpeg...");
-    setStatus("Pruefe Browser-Faehigkeiten...");
-    const ffmpeg = await ensureFfmpegLoaded();
-
-    const format = els.optFormat.value;
-    const bitrate = els.optBitrate.value;
-    const outFile = `output.${format}`;
-    const audioBuffer = await currentFile.slice(HEADER_SIZE).arrayBuffer();
-
-    await ffmpeg.writeFile("input.ogg", new Uint8Array(audioBuffer));
-    if (els.optCover.value === "yes" && currentCoverBlob) {
-      const coverBytes = new Uint8Array(await currentCoverBlob.arrayBuffer());
-      await ffmpeg.writeFile("cover.jpg", coverBytes);
-    }
-
-    const args = ["-y", "-i", "input.ogg"];
-    if (els.optCover.value === "yes" && currentCoverBlob) {
-      args.push("-i", "cover.jpg", "-map", "0:a", "-map", "1:v", "-c:v", "mjpeg", "-disposition:v", "attached_pic");
-    } else {
-      args.push("-map", "0:a");
-    }
-    if (format === "mp3") args.push("-c:a", "libmp3lame", "-b:a", bitrate);
-    else if (format === "m4a") args.push("-c:a", "aac", "-b:a", bitrate);
-    else args.push("-c:a", "libopus", "-b:a", bitrate);
-    args.push("-metadata", `title=${els.metaTitle.value}`);
-    args.push("-metadata", `album=${els.metaAlbum.value}`);
-    args.push("-metadata", `comment=${els.metaDesc.value}`);
-    args.push(outFile);
-
-    await ffmpeg.exec(args);
-    const data = await ffmpeg.readFile(outFile);
-    const blob = new Blob([data.buffer], { type: `audio/${format}` });
-    const safeName = safeFileName(`${(els.metaAlbum.value ? els.metaAlbum.value + " - " : "") + els.metaTitle.value}.${format}`);
-    renderDownload(blob, safeName, `📥 Download ${format.toUpperCase()}`);
-
-    if (els.optCue.value === "yes") {
-      const cueText = await buildCueText();
-      renderDownload(new Blob([cueText], { type: "text/plain" }), safeName.replace(`.${format}`, ".cue"), "📄 Download CUE");
-    }
-
-    setProgress(100, "Erfolgreich abgeschlossen.");
-    setStatus("Fertiggestellt!", "success");
-  } catch (err) {
-    log("WARN", "Konvertierung nicht verfuegbar", { message: String(err) });
-    setStatus("Konvertierung nicht verfuegbar", "warn");
-    setProgress(0, "Fallback aktiv: FFmpeg konnte auf diesem Host nicht geladen werden.");
-  } finally {
-    els.convertBtn.disabled = false;
-  }
+  setStatus(match.meta ? "Tonie erkannt!" : "Unbekannter Hash", match.meta ? "success" : "warn");
+  setStatus("Bereit für Release-Upload", "success");
 }
 
 function bindEvents() {
-  if (els.pickBtn) els.pickBtn.onclick = () => els.fileInput.click();
-  if (els.forceLocalBtn) els.forceLocalBtn.onclick = () => setStatus("Fallback aktiv: Konvertierung ist auf diesem Host nicht verfügbar.", "warn");
-  if (els.fileInput) els.fileInput.onchange = e => handleFile(e.target.files[0]);
-  if (els.dropzone) {
-    els.dropzone.ondragover = e => { e.preventDefault(); els.dropzone.classList.add("dragover"); };
-    els.dropzone.ondragleave = () => els.dropzone.classList.remove("dragover");
-    els.dropzone.ondrop = e => {
-      e.preventDefault();
-      els.dropzone.classList.remove("dragover");
-      if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
-    };
-  }
-  if (els.convertBtn) els.convertBtn.onclick = convertFile;
-  if (els.debugToggle) els.debugToggle.onclick = () => {
-    debugEnabled = !debugEnabled;
-    if (els.debugLog) els.debugLog.style.display = debugEnabled ? "block" : "none";
-  };
-}
-
-function initDefaults() {
-  setProgress(0, "Warte auf Eingabe");
-  setStatus("Warte auf Datei...");
-  if (els.debugLog) els.debugLog.style.display = "block";
-  if (els.engineSourceLabel) els.engineSourceLabel.textContent = "FFmpeg Fallback";
-  if (els.engineMode) els.engineMode.textContent = "Engine: Fallback";
+  els.pickBtn.onclick = () => els.fileInput.click();
+  els.fileInput.onchange = e => handleFile(e.target.files[0]);
+  els.dropzone.ondragover = e => { e.preventDefault(); els.dropzone.classList.add("dragover"); };
+  els.dropzone.ondragleave = () => els.dropzone.classList.remove("dragover");
+  els.dropzone.ondrop = e => { e.preventDefault(); els.dropzone.classList.remove("dragover"); if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]); };
+  els.convertBtn.onclick = startReleaseWorkflow;
+  els.debugToggle.onclick = () => { debugEnabled = !debugEnabled; document.getElementById("debugLogInline")?.classList.toggle("hidden", !debugEnabled); };
 }
 
 async function init() {
-  initDefaults();
+  setProgress(0, "Warte auf Eingabe");
+  setStatus("Warte auf Datei...");
   bindEvents();
-  log("INFO", "App gestartet", {
-    userAgent: navigator.userAgent,
-    sharedArrayBuffer: typeof SharedArrayBuffer !== "undefined",
-    crossOriginIsolated: window.crossOriginIsolated === true,
-    location: location.href
-  });
-  await initDb();
+  log("INFO", "App gestartet", { location: location.href });
+  try {
+    const db = await fetchJson(TONIES_DB_URL);
+    flattenToniesDB(db);
+    els.dbStatus.textContent = `DB geladen (${Object.keys(toniesByHash).length} Hashes)`;
+    els.dbStatus.className = "badge success";
+  } catch (e) {
+    els.dbStatus.textContent = "DB Fehler";
+  }
 }
-
 init();
