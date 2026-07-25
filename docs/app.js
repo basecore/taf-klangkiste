@@ -71,6 +71,7 @@ function setStatus(text, kind = "") {
   if (!els.status) return;
   els.status.textContent = text;
   els.status.className = kind ? `status ${kind}` : "status";
+  if (els.engineHint) els.engineHint.textContent = text;
   log("INFO", text);
 }
 
@@ -213,14 +214,13 @@ function showCover(blob) {
 async function ensureFfmpegLoaded() {
   if (ffmpegInstance) return ffmpegInstance;
   const ffmpeg = new FFmpeg();
-  const [coreURL, wasmURL, workerURL] = await Promise.all([
+  const [coreURL, wasmURL] = await Promise.all([
     toBlobURL(`${CORE_BASE}/ffmpeg-core.js`, "text/javascript"),
-    toBlobURL(`${CORE_BASE}/ffmpeg-core.wasm`, "application/wasm"),
-    toBlobURL(`${CORE_BASE}/ffmpeg-core.worker.js`, "text/javascript")
+    toBlobURL(`${CORE_BASE}/ffmpeg-core.wasm`, "application/wasm")
   ]);
   ffmpeg.on("log", ({ message }) => log("INFO", `FFmpeg: ${message}`));
   ffmpeg.on("progress", ({ progress }) => setProgress(Math.round(progress * 100), `Konvertiere: ${Math.round(progress * 100)}%`));
-  await ffmpeg.load({ coreURL, wasmURL, workerURL });
+  await ffmpeg.load({ coreURL, wasmURL });
   ffmpegInstance = ffmpeg;
   return ffmpegInstance;
 }
@@ -364,6 +364,7 @@ async function convertFile() {
 
 function bindEvents() {
   if (els.pickBtn) els.pickBtn.onclick = () => els.fileInput.click();
+  if (els.forceLocalBtn) els.forceLocalBtn.onclick = () => setStatus("Lokal-Modus ist in dieser GitHub-Pages-Version nicht erforderlich.", "success");
   if (els.fileInput) els.fileInput.onchange = e => handleFile(e.target.files[0]);
   if (els.dropzone) {
     els.dropzone.ondragover = e => { e.preventDefault(); els.dropzone.classList.add("dragover"); };
