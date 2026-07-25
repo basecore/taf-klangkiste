@@ -4,6 +4,8 @@ import { toBlobURL } from "https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist
 const TONIES_DB_URL = "https://raw.githubusercontent.com/toniebox-reverse-engineering/tonies-json/release/toniesV2.json";
 const HEADER_SIZE = 4096;
 const CORE_BASE = "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm";
+const GITHUB_REPO_URL = "https://github.com/basecore/taf-klangkiste";
+const GITHUB_ISSUES_URL = "https://github.com/basecore/taf-klangkiste/issues";
 
 const els = {
   status: document.getElementById("status"),
@@ -166,7 +168,7 @@ function buildGuessDescription(meta, filename, hash) {
 function minutesFromRuntime(v) {
   const n = Number(v);
   if (!Number.isFinite(n) || n <= 0) return "";
-  return `${Math.round(n)} Minuten`;
+  return `${(n / 60).toFixed(1).replace(/\.0$/, "")} Minuten`;
 }
 
 function joinTracks(meta) {
@@ -211,13 +213,14 @@ function showCover(blob) {
 async function ensureFfmpegLoaded() {
   if (ffmpegInstance) return ffmpegInstance;
   const ffmpeg = new FFmpeg();
-  const [coreURL, wasmURL] = await Promise.all([
+  const [coreURL, wasmURL, workerURL] = await Promise.all([
     toBlobURL(`${CORE_BASE}/ffmpeg-core.js`, "text/javascript"),
-    toBlobURL(`${CORE_BASE}/ffmpeg-core.wasm`, "application/wasm")
+    toBlobURL(`${CORE_BASE}/ffmpeg-core.wasm`, "application/wasm"),
+    toBlobURL(`${CORE_BASE}/ffmpeg-core.worker.js`, "text/javascript")
   ]);
   ffmpeg.on("log", ({ message }) => log("INFO", `FFmpeg: ${message}`));
   ffmpeg.on("progress", ({ progress }) => setProgress(Math.round(progress * 100), `Konvertiere: ${Math.round(progress * 100)}%`));
-  await ffmpeg.load({ coreURL, wasmURL });
+  await ffmpeg.load({ coreURL, wasmURL, workerURL });
   ffmpegInstance = ffmpeg;
   return ffmpegInstance;
 }
