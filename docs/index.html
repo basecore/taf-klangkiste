@@ -14,8 +14,8 @@
       <div>
         <p class="eyebrow">GitHub Actions Release-Converter</p>
         <h1>TAF Klangkiste PRO</h1>
-        <p class="lead">Datei auswählen, Metadaten prüfen und einen Release-Job starten. Die MP3 landet nach dem Workflow als GitHub-Release-Asset.</p>
-        <p class="repo-links"><a href="https://github.com/basecore/taf-klangkiste" target="_blank" rel="noopener noreferrer">GitHub Projekt</a> · <a href="https://github.com/basecore/taf-klangkiste/issues" target="_blank" rel="noopener noreferrer">Issues</a></p>
+        <p class="lead">Datei auswählen, Metadaten prüfen und einen Release-Job vorbereiten. Die MP3 wird anschließend über GitHub Actions als Release-Asset erzeugt.</p>
+        <p class="repo-links"><a href="https://github.com/basecore/taf-klangkiste" target="_blank" rel="noopener noreferrer">GitHub Projekt</a> · <a href="https://github.com/basecore/taf-klangkiste/issues" target="_blank" rel="noopener noreferrer">Issues</a> · <a href="https://github.com/basecore/taf-klangkiste/actions" target="_blank" rel="noopener noreferrer">Actions</a></p>
       </div>
       <div class="top-actions">
         <div id="status" class="status">Warte auf Eingabe</div>
@@ -40,7 +40,7 @@
           <div class="section-header">
             <div>
               <h2>Metadaten</h2>
-              <div class="small">Diese Werte werden in den Release-Job übernommen.</div>
+              <div class="small">Diese Werte werden in die Payload für GitHub Actions übernommen.</div>
             </div>
             <span class="badge">Auto-Erkennung</span>
           </div>
@@ -67,7 +67,7 @@
           <div class="section-header">
             <div>
               <h2>Release</h2>
-              <div class="small">Ein GitHub Actions Workflow erzeugt die MP3 und veröffentlicht sie als Asset.</div>
+              <div class="small">Erzeugt eine Payload-JSON für den GitHub-Actions-Workflow.</div>
             </div>
             <span class="badge">Server-Side</span>
           </div>
@@ -79,16 +79,17 @@
             <label>Cover einbetten<select id="optCover"><option value="yes" selected>Ja</option><option value="no">Nein</option></select></label>
             <label>CUE erzeugen<select id="optCue"><option value="yes" selected>Ja</option><option value="no">Nein</option></select></label>
           </div>
-          <div style="margin-top:18px;"><button id="convertBtn" class="btn primary large" type="button" disabled>Release-Job starten</button></div>
+          <div style="margin-top:18px;"><button id="convertBtn" class="btn primary large" type="button" disabled>Payload erzeugen</button></div>
           <div class="progress-wrap"><div class="progress"><div id="progressBar" class="bar"></div></div><div id="progressText" class="progress-text">Warte auf Datei...</div></div>
           <div id="downloadArea" class="download-area"></div>
         </div>
         <div class="panel">
           <div class="section-header"><div><h2>Hinweise</h2></div></div>
           <ul class="list">
-            <li>Die Datei wird lokal im Browser vorbereitet und dann an GitHub Actions übergeben.</li>
-            <li>Der Workflow erzeugt das MP3 mit FFmpeg auf einem Runner.</li>
+            <li>Die Datei wird lokal im Browser vorbereitet.</li>
+            <li>Der Workflow erzeugt das MP3 mit FFmpeg auf GitHub Actions.</li>
             <li>Das Ergebnis erscheint als Release Asset.</li>
+            <li>Für die eigentliche Konvertierung muss die Payload im Repo liegen.</li>
           </ul>
         </div>
       </div>
