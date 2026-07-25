@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>TAF Klangkiste PRO</title>
-  <meta name="description" content="TAF-Konvertierung mit Tonies-DB, Cover, Metadaten und FFmpeg direkt im Browser.">
+  <meta name="description" content="TAF-Datei an GitHub Actions übergeben, MP3 als Release erzeugen.">
   <link rel="stylesheet" href="./style.css">
   <script type="module" src="./app.js"></script>
 </head>
@@ -12,25 +12,20 @@
   <main class="app">
     <section class="hero">
       <div>
-        <p class="eyebrow">Client-Side WebApp</p>
+        <p class="eyebrow">GitHub Actions Release-Converter</p>
         <h1>TAF Klangkiste PRO</h1>
-        <p class="lead">TAF-Datei importieren, Tonies-Metadaten anzeigen, Cover einbetten und direkt im Browser konvertieren.</p>
+        <p class="lead">Datei auswählen, Metadaten prüfen und einen Release-Job starten. Die MP3 landet nach dem Workflow als GitHub-Release-Asset.</p>
         <p class="repo-links"><a href="https://github.com/basecore/taf-klangkiste" target="_blank" rel="noopener noreferrer">GitHub Projekt</a> · <a href="https://github.com/basecore/taf-klangkiste/issues" target="_blank" rel="noopener noreferrer">Issues</a></p>
       </div>
       <div class="top-actions">
         <div id="status" class="status">Warte auf Eingabe</div>
-        <button id="debugToggle" class="btn secondary" type="button">Debug umschalten</button>
+        <button id="debugToggle" class="btn secondary" type="button">Debug</button>
       </div>
     </section>
 
     <section class="grid-main">
       <div>
         <div class="panel upload-zone" id="dropzone" role="button" tabindex="0" aria-label="TAF-Datei auswählen">
-          <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-            <path d="M7 10l5-5 5 5"></path>
-            <path d="M12 5v12"></path>
-          </svg>
           <h2>Datei auswählen</h2>
           <p>Klicken oder Datei hier ablegen</p>
           <div class="control-row">
@@ -44,8 +39,8 @@
         <div class="panel">
           <div class="section-header">
             <div>
-              <h2>Tonies-Metadaten</h2>
-              <div class="small">Titel, Beschreibung, Alter, Sprache, Kategorie, Laufzeit und Trackliste aus der Tonies-DB.</div>
+              <h2>Metadaten</h2>
+              <div class="small">Diese Werte werden in den Release-Job übernommen.</div>
             </div>
             <span class="badge">Auto-Erkennung</span>
           </div>
@@ -61,13 +56,7 @@
               <label>Kategorie<input id="metaCategory" type="text" readonly></label>
               <label>Laufzeit (Minuten)<input id="metaRuntime" type="text" readonly></label>
             </div>
-            <div class="engine-row">
-              <span class="engine-chip" id="engineSourceLabel">FFmpeg Fallback</span>
-              <span class="engine-chip" id="engineMode">Engine: Fallback</span>
-              <button id="forceLocalBtn" class="btn" type="button">Fallback anzeigen</button>
-            </div>
             <label>Trackliste<textarea id="metaTracks" readonly placeholder="Trackliste"></textarea></label>
-            <div id="engineHint" class="note">Warte auf Datei...</div>
             <div id="coverPreview" class="cover-preview" aria-label="Cover-Vorschau"></div>
           </div>
         </div>
@@ -77,35 +66,29 @@
         <div class="panel action-panel">
           <div class="section-header">
             <div>
-              <h2>Optionen</h2>
-              <div class="small">Wenn FFmpeg nicht lädt, bleibt die App im Fallback-Modus.</div>
+              <h2>Release</h2>
+              <div class="small">Ein GitHub Actions Workflow erzeugt die MP3 und veröffentlicht sie als Asset.</div>
             </div>
-            <span class="badge">Browser-Verarbeitung</span>
+            <span class="badge">Server-Side</span>
           </div>
           <div class="grid-2">
-            <label>Ausgabeformat<select id="optFormat"><option value="mp3">MP3</option><option value="m4a">M4A</option><option value="opus">OPUS</option></select></label>
+            <label>Ausgabeformat<select id="optFormat"><option value="mp3">MP3</option></select></label>
             <label>Bitrate<select id="optBitrate"><option value="96k">96k</option><option value="128k" selected>128k</option><option value="160k">160k</option><option value="192k">192k</option></select></label>
           </div>
-          <div class="grid-2" style="margin-top: 16px;">
+          <div class="grid-2" style="margin-top:16px;">
             <label>Cover einbetten<select id="optCover"><option value="yes" selected>Ja</option><option value="no">Nein</option></select></label>
             <label>CUE erzeugen<select id="optCue"><option value="yes" selected>Ja</option><option value="no">Nein</option></select></label>
           </div>
-          <div style="margin-top: 18px;"><button id="convertBtn" class="btn primary large" type="button" disabled>Konvertierung starten</button></div>
+          <div style="margin-top:18px;"><button id="convertBtn" class="btn primary large" type="button" disabled>Release-Job starten</button></div>
           <div class="progress-wrap"><div class="progress"><div id="progressBar" class="bar"></div></div><div id="progressText" class="progress-text">Warte auf Datei...</div></div>
           <div id="downloadArea" class="download-area"></div>
         </div>
         <div class="panel">
-          <div class="section-header"><div><h2>Debug-Log</h2><div class="small">Zeigt DB-Laden, Hash-Lookup, Cover-Fetch und Fallback-Hinweise.</div></div><span class="badge">Verbose</span></div>
-          <div class="note">Wenn FFmpeg im Browser nicht geladen werden kann, wechselt die App automatisch in den Fallback-Modus.</div>
-          <div id="debugLog" class="debug-box"></div>
-        </div>
-        <div class="panel">
           <div class="section-header"><div><h2>Hinweise</h2></div></div>
           <ul class="list">
-            <li>Wenn <code>SharedArrayBuffer</code> fehlt, bleibt nur der Fallback-Modus.</li>
-            <li>Das Cover wird direkt aus der Tonies-DB geladen.</li>
-            <li>Für GitHub Pages ist <code>docs/</code> als Publish-Root sinnvoll.</li>
-            <li>Der Fallback benötigt keinen lokalen FFmpeg-Ordner.</li>
+            <li>Die Datei wird lokal im Browser vorbereitet und dann an GitHub Actions übergeben.</li>
+            <li>Der Workflow erzeugt das MP3 mit FFmpeg auf einem Runner.</li>
+            <li>Das Ergebnis erscheint als Release Asset.</li>
           </ul>
         </div>
       </div>
