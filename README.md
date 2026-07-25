@@ -7,7 +7,7 @@
 
 [🚀 App öffnen](https://basecore.github.io/taf-klangkiste/) · [📦 Repository](https://github.com/basecore/taf-klangkiste) · [🐛 Issues](https://github.com/basecore/taf-klangkiste/issues) · [⚙️ Actions](https://github.com/basecore/taf-klangkiste/actions)
 
-TAF Klangkiste PRO ist eine GitHub-Pages-WebApp, mit der du Toniebox-TAF-Dateien im Browser analysieren und für die Konvertierung über GitHub Actions vorbereiten kannst. Die eigentliche MP3-Erzeugung läuft in der **Release-Variante** auf einem GitHub-Runner und wird anschließend als Release-Asset bereitgestellt. [web:250][web:268]
+TAF Klangkiste PRO ist eine GitHub-Pages-WebApp, mit der du Toniebox-TAF-Dateien im Browser analysieren und für die Konvertierung über GitHub Actions vorbereiten kannst. Die eigentliche MP3-Erzeugung läuft in der Release-Variante auf einem GitHub-Runner und wird anschließend als Release-Asset bereitgestellt. [web:250][web:268]
 
 ## Features
 
@@ -26,7 +26,7 @@ TAF Klangkiste PRO ist eine GitHub-Pages-WebApp, mit der du Toniebox-TAF-Dateien
 2. Wähle eine `.taf`-Datei aus oder ziehe sie in das Upload-Feld.
 3. Prüfe oder ändere Titel, Album, Beschreibung und weitere Metadaten.
 4. Wähle Bitrate, Cover-Option und CUE-Option.
-5. Klicke auf **Release-Job starten**.
+5. Klicke auf **Payload erzeugen**.
 6. Lade die erzeugte Payload als JSON herunter.
 7. Lege die Payload-Datei in `release-payloads/` ab und veröffentliche einen Release oder starte den Workflow manuell.
 8. GitHub Actions erzeugt daraus die MP3 und hängt sie an den Release an. [web:250][web:267][web:268]
@@ -94,7 +94,8 @@ docs/
     └── convert-taf-release.yml
 
 release-payloads/
-└── latest.release.json
+├── latest.release.json
+└── .gitkeep
 ```
 
 ## Versionierung
