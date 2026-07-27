@@ -681,11 +681,24 @@
       metricDb: document.getElementById('metricDb')
     };
 
-    function log(message, type='info') {
-      const item = { message, type, time: new Date().toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit', second:'2-digit' }) };
+    function log(message, type = 'info') {
+      const item = {
+        message,
+        type,
+        time: new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+      };
       state.logs.unshift(item);
       state.logs = state.logs.slice(0, 40);
       renderLogs();
+    }
+    
+    function renderLogs() {
+      els.logList.innerHTML = state.logs.length ? state.logs.map(entry => `
+        <div class="logitem ${entry.type}">
+          <span class="dot"></span>
+          <div><strong style="color:var(--text)">${entry.time}</strong> · ${entry.message}</div>
+        </div>
+      `).join('') : '<div class="logitem"><span class="dot"></span><div>Noch keine Log-Einträge.</div></div>';
     }
 
     function renderLogs() {
