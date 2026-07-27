@@ -448,13 +448,12 @@
       if (state.ffmpegLoaded) return state.ffmpeg;
       setEngineStatus('FFmpeg.wasm wird geladen ...');
       const ffmpeg = new FFmpeg();
-      const baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@0.12.10/dist/esm';
-      const [coreURL, wasmURL, workerURL] = await Promise.all([
+      const baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd';
+      const [coreURL, wasmURL] = await Promise.all([
         toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-        toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
-        toBlobURL(`${baseURL}/ffmpeg-core.worker.js`, 'text/javascript')
+        toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm')
       ]);
-      await ffmpeg.load({ coreURL, wasmURL, workerURL });
+      await ffmpeg.load({ coreURL, wasmURL });
       state.ffmpeg = ffmpeg;
       state.ffmpegLoaded = true;
       setEngineStatus('FFmpeg.wasm geladen und einsatzbereit.');
@@ -528,6 +527,7 @@
           <div class="file-meta">
             <h4>${item.displayTitle || item.file.name}</h4>
             <p>${(item.meta?.series || 'Unbekannte Serie')} · ${item.format.toUpperCase()} · ${Math.round(item.file.size / 1024 / 1024 * 10) / 10} MB</p>
+            ${(item.coverUrl || item.meta?.image || item.meta?.pic) ? `<p><a class="inline-link" href="${item.coverUrl || item.meta?.image || item.meta?.pic}" target="_blank" rel="noreferrer">Cover-Link öffnen</a></p>` : ''}
             <div class="taglist">${(item.tags || []).slice(0, 6).map(tag => `<span class="tag">${tag}</span>`).join('')}</div>
             ${(item.trackList && item.trackList.length) ? `<div class="muted" style="margin-top:.5rem">Tracks: ${item.trackList.slice(0,5).join(' · ')}${item.trackList.length > 5 ? ' …' : ''}</div>` : ''}
           </div>
