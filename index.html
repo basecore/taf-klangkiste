@@ -854,20 +854,19 @@
   
     const ffmpeg = new FFmpeg();
   
-    const cdnBase = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@0.12.10/dist/esm';
-    const localBase = './assets/ffmpeg';
+    const baseURL = './assets/ffmpeg';
   
     const [coreURL, wasmURL, workerURL] = await Promise.all([
-      toBlobURL(`${cdnBase}/ffmpeg-core.js`, 'text/javascript'),
-      toBlobURL(`${cdnBase}/ffmpeg-core.wasm`, 'application/wasm'),
-      toBlobURL(`${cdnBase}/ffmpeg-core.worker.js`, 'text/javascript')
+      toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
+      toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+      toBlobURL(`${baseURL}/ffmpeg-core.worker.js`, 'text/javascript')
     ]);
   
     await ffmpeg.load({
       coreURL,
       wasmURL,
       workerURL,
-      classWorkerURL: `${localBase}/worker.js`
+      classWorkerURL: `${baseURL}/worker.js`
     });
   
     state.ffmpeg = ffmpeg;
