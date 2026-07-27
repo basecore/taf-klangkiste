@@ -909,17 +909,17 @@
       setEngineStatus('FFmpeg.wasm wird geladen …');
       log('FFmpeg.wasm wird geladen …');
       const ffmpeg = new FFmpeg();
-      const baseURL = './assets/ffmpeg';
+      const baseURL = new URL('assets/ffmpeg/', window.location.href).href;
       const [coreURL, wasmURL, workerURL] = await Promise.all([
-        toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-        toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
-        toBlobURL(`${baseURL}/ffmpeg-core.worker.js`, 'text/javascript')
+        toBlobURL(`${baseURL}ffmpeg-core.js`, 'text/javascript'),
+        toBlobURL(`${baseURL}ffmpeg-core.wasm`, 'application/wasm'),
+        toBlobURL(`${baseURL}ffmpeg-core.worker.js`, 'text/javascript')
       ]);
       await ffmpeg.load({
         coreURL,
         wasmURL,
         workerURL,
-        classWorkerURL: `${baseURL}/worker.js`
+        classWorkerURL: `${baseURL}worker.js`
       });
       state.ffmpeg = ffmpeg;
       state.ffmpegLoaded = true;
@@ -928,9 +928,15 @@
       return ffmpeg;
     }
 
-    function fetchCoverUrl(url) {
+    async function fetchCoverBlob(url) {
       if (!url) return null;
-      return url || null;
+      try {
+        const res = await fetch(url, { mode: 'cors' });
+        if (!res.ok) return null;
+        return await res.blob();
+      } catch {
+        return null;
+      }
     }
 
     async function enrichFile(file) {
@@ -974,8 +980,14 @@
 
       if (coverUrl) {
         log('Cover-URL gefunden, lade Vorschau …', 'info');
-        item.coverObjectUrl = fetchCoverUrl(coverUrl);
-        log('Cover-URL übernommen.', 'ok');
+        const blob = await fetchCoverBlob(coverUrl);
+        if (blob) {
+          item.coverBlob = blob;
+          item.coverObjectUrl = URL.createObjectURL(blob);
+          log('Cover-Vorschau geladen.', 'ok');
+        } else {
+          log('Cover konnte nicht geladen werden.', 'warn');
+        }
       }
       return item;
     }
@@ -1202,8 +1214,6 @@
       log('Demo-Eintrag geladen.', 'ok');
     }
 
-    function syncJsonButton() { if (els.downloadJsonBtn) els.downloadJsonBtn.style.display = els.createJson.checked ? 'inline-flex' : 'none'; }
-
     function initTheme() {
       const saved = localStorage.getItem('kg-theme');
       if (saved) document.documentElement.setAttribute('data-theme', saved);
@@ -1225,6 +1235,7 @@
       ['dragenter', 'dragover'].forEach(type => els.dropzone.addEventListener(type, enter));
       ['dragleave', 'dragend'].forEach(type => els.dropzone.addEventListener(type, leave));
       els.dropzone.addEventListener('drop', drop);
+      els.dropzone.addEventListener('click', () => els.fileInput.click());
       els.dropzone.addEventListener('keydown', e => {
         if (e.key === 'Enter' || e.key === ' ') els.fileInput.click();
       });
@@ -1242,9 +1253,7 @@
     }
 
     async function init() {
-      if (els.createJson) els.createJson.addEventListener('change', syncJsonButton);
-    syncJsonButton();
-    initTheme();
+      initTheme();
       initDnD();
       bindEvents();
       renderLogs();
