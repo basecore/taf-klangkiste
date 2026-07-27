@@ -548,7 +548,7 @@
     }
 
     async function startConversion() {
-      if (!state.files.length) { setStatus('Bitte zuerst mindestens eine TAF-Datei auswählen."); return; }
+      if (!state.files.length) { setStatus('Bitte zuerst mindestens eine TAF-Datei auswählen.'); return; }
       els.convertBtn.disabled = true;
       state.converted = 0;
       state.generatedEntries = [];
