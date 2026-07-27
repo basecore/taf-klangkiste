@@ -131,7 +131,7 @@
         <div>
           <h1 class="title">TAF Klangkiste Browser Tool</h1>
           <p class="subtitle">Smartphone-optimiert, lokal im Browser, ohne Server-Upload.</p>
-          <p class="subtitle" style="margin-top:.35rem">Version 1.0.0 · 27.07.2026 · <a class="inline-link" href="https://github.com/basecore/taf-klangkiste" target="_blank" rel="noreferrer">GitHub-Projekt öffnen</a></p>
+          <p class="subtitle" style="margin-top:.35rem">Version 1.0.1 · 27.07.2026 · <a class="inline-link" href="https://github.com/basecore/taf-klangkiste" target="_blank" rel="noreferrer">GitHub-Projekt öffnen</a></p>
         </div>
       </div>
       <div style="display:flex; gap:.5rem; align-items:center; flex-wrap:wrap; justify-content:flex-end">
@@ -144,10 +144,10 @@
 
     <section class="hero">
       <article class="card hero-main">
-        <span class="eyebrow">TAF Konverter · v1.0.0</span>
+        <span class="eyebrow">TAF Konverter · v1.0.1</span>
         <h2>Schnell. Modern. Direkt im Browser.</h2>
         <p>Wähle deine TAF-Dateien aus und starte die Umwandlung mit wenigen Klicks.</p>
-        <p class="muted" style="margin-top:.75rem">Projekt: <a class="inline-link" href="https://github.com/basecore/taf-klangkiste" target="_blank" rel="noreferrer">github.com/basecore/taf-klangkiste</a></p>
+        <p class="muted" style="margin-top:.75rem">Projekt: <a class="inline-link" href="https://github.com/basecore/taf-klangkiste" target="_blank" rel="noreferrer">github.com/basecore/taf-klangkiste</a> · Build 27.07.2026</p>
         <div class="hero-points">
           <div class="pill">MP3 / M4A / OGG</div>
           <div class="pill">Batch-Verarbeitung</div>
@@ -228,7 +228,7 @@
       <article class="card panel">
         <h3>Vorschau</h3>
         <div id="queue" class="queue"></div>
-        <p class="footer-note">Browser-Variante für GitHub Pages und mobile Geräte. Version 1.0.0 · 27.07.2026.</p>
+        <p class="footer-note">Browser-Variante für GitHub Pages und mobile Geräte. Version 1.0.1 · 27.07.2026.</p>
       </article>
     </section>
   </main>
@@ -354,6 +354,15 @@
         }
       }
       return db;
+    }
+
+    function summarizeMeta(meta) {
+      const parts = [];
+      if (meta.series) parts.push(meta.series);
+      if (meta.episode) parts.push(meta.episode);
+      if (meta.description) parts.push(meta.description);
+      if (meta.tracks && meta.tracks.length) parts.push(`Tracks: ${meta.tracks.slice(0,3).join(' · ')}`);
+      return parts.join(' | ');
     }
 
     function detectTags(title, desc, genre='') {
@@ -529,6 +538,7 @@
           <div class="file-meta">
             <h4>${item.displayTitle || item.file.name}</h4>
             <p>${(item.meta?.series || 'Unbekannte Serie')} · ${item.format.toUpperCase()} · ${Math.round(item.file.size / 1024 / 1024 * 10) / 10} MB</p>
+            ${(item.metaPreview) ? `<p class="muted">${item.metaPreview}</p>` : ''}
             ${(item.coverUrl || item.meta?.image || item.meta?.pic) ? `<p><a class="inline-link" href="${item.coverUrl || item.meta?.image || item.meta?.pic}" target="_blank" rel="noreferrer">Cover-Link öffnen</a></p>` : ''}
             <div class="taglist">${(item.tags || []).slice(0, 6).map(tag => `<span class="tag">${tag}</span>`).join('')}</div>
             ${(item.trackList && item.trackList.length) ? `<div class="muted" style="margin-top:.5rem">Tracks: ${item.trackList.slice(0,5).join(' · ')}${item.trackList.length > 5 ? ' …' : ''}</div>` : ''}
@@ -555,6 +565,7 @@
       const finalDesc = meta.description || '';
       const finalAge = Number.parseInt(meta.age || 0, 10) || 0;
       const finalGenre = meta.genre || 'Hörspiel';
+      const metaPreview = summarizeMeta(meta);
       const tags = detectTags(title, finalDesc, finalGenre);
       const coverUrl = meta.image || meta.pic || null;
       const outFormat = els.formatSelect.value;
@@ -574,7 +585,8 @@
         coverObjectUrl: null,
         chapters: getChaptersRobust(uint8),
         pageMap: scanOggTimestamps(uint8),
-        trackList: (meta.tracks || meta['track-desc'] || meta.trackList || [])
+        trackList: (meta.tracks || meta['track-desc'] || meta.trackList || []),
+        metaPreview
       };
       if (coverUrl) {
         const blob = await fetchCoverBlob(coverUrl);
