@@ -1029,17 +1029,23 @@
   }
 
   async function imageUrlToJpegBlob(url, quality = 0.92) {
-    const res = await fetch(url, { mode: 'cors' });
-    const blob = await res.blob();
-    const bitmap = await createImageBitmap(blob);
-    const canvas = document.createElement('canvas');
-    canvas.width = bitmap.width;
-    canvas.height = bitmap.height;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(bitmap, 0, 0);
-    const out = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', quality));
-    bitmap.close?.();
-    return out;
+    try {
+      const res = await fetch(url, { mode: 'cors' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      const bitmap = await createImageBitmap(blob);
+      const canvas = document.createElement('canvas');
+      canvas.width = bitmap.width;
+      canvas.height = bitmap.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(bitmap, 0, 0);
+      const out = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', quality));
+      bitmap.close?.();
+      if (!out) throw new Error('toBlob failed');
+      return out;
+    } catch (err) {
+      return null;
+    }
   }
 
   async function enrichFile(file) {
@@ -1074,17 +1080,26 @@
     const genre = meta.genre || 'Hörspiel';
     const tags = detectTags(title, desc, genre);
 
+
     const coverUrl = meta.image || meta.pic || null;
     let coverBlob = null;
     let coverObjectUrl = null;
-
+    
     if (coverUrl) {
-      try {
-        coverBlob = await imageUrlToJpegBlob(coverUrl, 0.92);
-        coverObjectUrl = coverBlob ? URL.createObjectURL(coverBlob) : null;
-      } catch {
-        log('Cover konnte nicht geladen oder in JPG umgewandelt werden.', 'warn');
+      coverBlob = await imageUrlToJpegBlob(coverUrl, 0.92);
+    
+      if (coverBlob) {
+        coverObjectUrl = URL.createObjectURL(coverBlob);
+        log('Cover erfolgreich als JPG geladen.', 'ok');
+      } else {
+        log('Cover nur für Anzeige verfügbar, nicht als JPG speicherbar.', 'warn');
       }
+    }
+
+
+    function renderCoverPreview(url, imgEl) {
+      imgEl.crossOrigin = 'anonymous';
+      imgEl.src = url;
     }
 
     const item = {
