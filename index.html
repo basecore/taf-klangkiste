@@ -1404,25 +1404,6 @@
   }
 
   init();
-
-  async function addFiles(fileList) {
-    await fetchToniesDb();
-    const tafs = [...fileList].filter(file => file.name.toLowerCase().endsWith('.taf'));
-    if (!tafs.length) {
-      setStatus('Keine TAF-Dateien gefunden.');
-      log('Import abgebrochen: keine TAF-Dateien.', 'warn');
-      return;
-    }
-    setStatus('Dateien werden analysiert …');
-    for (const file of tafs) {
-      const item = await enrichFile(file);
-      if (item === null) continue;
-      state.files.push(item);
-      renderQueue();
-    }
-    setStatus(`${state.files.length} Datei(en) bereit.`);
-    log(`${state.files.length} Datei(en) für die Konvertierung bereit.`, 'ok');
-  }
 </script>
 </body>
 </html>
