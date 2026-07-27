@@ -524,6 +524,7 @@
       <div class="checks">
         <label class="check"><input type="checkbox" id="embedCover" checked /><span><strong>Cover einbetten</strong><br><span style="color:var(--muted)">Cover aus der Tonie-DB in MP3/M4A einfügen, sofern verfügbar.</span></span></label>
         <label class="check"><input type="checkbox" id="createJson" /><span><strong>klangkiste.json erzeugen</strong><br><span style="color:var(--muted)">Metadaten als JSON ausgeben.</span></span></label>
+        <label class="check"><input type="checkbox" id="exportCue" checked /><span><strong>CUE-Datei exportieren</strong><br><span style="color:var(--muted)">Zusätzlich eine CUE-Datei für jede Konvertierung erzeugen.</span></span></label>
         <label class="check"><input type="checkbox" id="createCovers" checked /><span><strong>Cover separat speichern</strong><br><span style="color:var(--muted)">JPG-Dateien zusätzlich mit in das ZIP legen.</span></span></label>
         <label class="check"><input type="checkbox" id="zipAll" checked /><span><strong>Alles als ZIP herunterladen</strong><br><span style="color:var(--muted)">Praktisch für mehrere Dateien am Smartphone.</span></span></label>
       </div>
@@ -639,6 +640,7 @@
     commentLimit: document.getElementById('commentLimit'),
     embedCover: document.getElementById('embedCover'),
     createJson: document.getElementById('createJson'),
+    exportCue: document.getElementById('exportCue'),
     createCovers: document.getElementById('createCovers'),
     convertBtn: document.getElementById('convertBtn'),
     stopBtn: document.getElementById('stopBtn'),
@@ -782,6 +784,7 @@
       let ts = '00:00:00';
       const key = ch > 0 ? ch - 1 : 0;
       if (pageMap && pageMap[key] != null) ts = granuleToCue(pageMap[key]);
+      if (ts === '00:00:00' && ch > 0) ts = granuleToCue(ch * OPUS_SAMPLE_RATE * 15);
       const tName = trackList[idx] || `Kapitel ${idx + 1}`;
       out += `  TRACK ${String(idx + 1).padStart(2,'0')} AUDIO\n`;
       out += `    TITLE "${String(tName).replace(/"/g, "'")}"\n`;
@@ -1028,11 +1031,28 @@
     return pageMap;
   }
 
+  const COVER_PROXIES = [
+    'https://proxy.corsfix.com/?',
+    'https://corsproxy.io/?',
+    'https://api.allorigins.win/raw?url='
+  ];
+
+  async function fetchViaProxies(url) {
+    const tries = [url, ...COVER_PROXIES.map(p => p + encodeURIComponent(url))];
+    for (const candidate of tries) {
+      try {
+        const res = await fetch(candidate, { mode: 'cors', cache: 'no-store' });
+        if (!res.ok) continue;
+        return await res.blob();
+      } catch {}
+    }
+    return null;
+  }
+
   async function imageUrlToJpegBlob(url, quality = 0.92) {
     try {
-      const res = await fetch(url, { mode: 'cors' });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const blob = await res.blob();
+      const blob = await fetchViaProxies(url);
+      if (!blob) throw new Error('cover download failed');
       const bitmap = await createImageBitmap(blob);
       const canvas = document.createElement('canvas');
       canvas.width = bitmap.width;
