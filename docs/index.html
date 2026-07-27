@@ -17,12 +17,12 @@
       --text-xl: clamp(1.5rem, 1.2rem + 1.25vw, 2.25rem);
       --text-2xl: clamp(2rem, 1.2rem + 2.5vw, 3.5rem);
       --space-1: 0.25rem; --space-2: 0.5rem; --space-3: 0.75rem; --space-4: 1rem; --space-5: 1.25rem; --space-6: 1.5rem; --space-8: 2rem; --space-10: 2.5rem; --space-12: 3rem; --space-16: 4rem;
-      --color-bg: #f7f6f2; --color-surface: #f9f8f5; --color-surface-2: #fbfbf9; --color-surface-offset: #edeae5; --color-border: #d4d1ca;
-      --color-text: #28251d; --color-text-muted: #6d6a63; --color-text-faint: #9d9a93; --color-text-inverse: #f9f8f4;
-      --color-primary: #01696f; --color-primary-hover: #0c4e54; --color-primary-highlight: #dcebe8;
-      --color-success: #437a22; --color-warning: #b06d00; --color-error: #a12c7b; --color-blue: #006494;
+      --color-bg: #f5f6fa; --color-surface: rgba(255,255,255,.82); --color-surface-2: rgba(255,255,255,.94); --color-surface-offset: #eef1f7; --color-border: rgba(15,23,42,.08);
+      --color-text: #111827; --color-text-muted: #6b7280; --color-text-faint: #9ca3af; --color-text-inverse: #ffffff;
+      --color-primary: #0f766e; --color-primary-hover: #115e59; --color-primary-highlight: #d6f3ef; --preset-accent:#0f766e;
+      --color-success: #16a34a; --color-warning: #d97706; --color-error: #db2777; --color-blue: #2563eb;
       --radius-sm: .5rem; --radius-md: .75rem; --radius-lg: 1rem; --radius-xl: 1.5rem; --radius-full: 9999px;
-      --shadow-sm: 0 2px 8px rgba(40,37,29,.06); --shadow-md: 0 12px 30px rgba(40,37,29,.10); --shadow-lg: 0 22px 60px rgba(40,37,29,.14);
+      --shadow-sm: 0 1px 2px rgba(15,23,42,.06), 0 8px 20px rgba(15,23,42,.05); --shadow-md: 0 12px 30px rgba(15,23,42,.10); --shadow-lg: 0 22px 60px rgba(15,23,42,.12);
       --transition: 180ms cubic-bezier(.16,1,.3,1);
       --font-body: 'Instrument Sans', system-ui, sans-serif;
       --font-display: 'Manrope', system-ui, sans-serif;
@@ -36,7 +36,7 @@
     }
     * { box-sizing: border-box; }
     html { scroll-behavior: smooth; }
-    body { margin: 0; min-height: 100dvh; background: radial-gradient(circle at top, color-mix(in srgb, var(--color-primary) 7%, var(--color-bg)), var(--color-bg) 38%); color: var(--color-text); font-family: var(--font-body); font-size: var(--text-base); line-height: 1.55; }
+    body { margin: 0; min-height: 100dvh; background: radial-gradient(circle at top, rgba(15,118,110,.12), transparent 32%), linear-gradient(180deg, #f8fafc, var(--color-bg) 38%); color: var(--color-text); font-family: var(--font-body); font-size: var(--text-base); line-height: 1.55; }
     button, input, select, textarea { font: inherit; }
     img { max-width: 100%; display: block; }
     .shell { width: min(1180px, calc(100% - 1.5rem)); margin: 0 auto; padding: var(--space-6) 0 var(--space-12); }
@@ -47,7 +47,7 @@
     .subtitle { margin: .25rem 0 0; color: var(--color-text-muted); font-size: var(--text-sm); }
     .theme-toggle { min-width: 44px; min-height: 44px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent); background: var(--color-surface); color: var(--color-text); cursor: pointer; box-shadow: var(--shadow-sm); }
     .hero { display: grid; grid-template-columns: 1.2fr .8fr; gap: var(--space-6); margin-bottom: var(--space-6); }
-    .card { background: color-mix(in srgb, var(--color-surface) 88%, transparent); backdrop-filter: blur(12px); border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent); border-radius: var(--radius-xl); box-shadow: var(--shadow-md); }
+    .card { background: var(--color-surface); backdrop-filter: blur(18px) saturate(160%); border: 1px solid var(--color-border); border-radius: 28px; box-shadow: var(--shadow-md); }
     .hero-main { padding: var(--space-8); }
     .eyebrow { display: inline-flex; align-items: center; gap: .5rem; padding: .4rem .8rem; border-radius: var(--radius-full); background: var(--color-primary-highlight); color: var(--color-primary); font-size: var(--text-xs); font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
     .hero-main h2 { margin: var(--space-4) 0 var(--space-3); font-family: var(--font-display); font-size: var(--text-2xl); line-height: 1.02; }
@@ -61,8 +61,11 @@
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-6); }
     .panel { padding: var(--space-6); }
     .panel h3 { margin: 0 0 var(--space-4); font-size: var(--text-lg); font-family: var(--font-display); }
-    .dropzone { border: 2px dashed color-mix(in srgb, var(--color-primary) 38%, var(--color-border)); border-radius: var(--radius-xl); padding: var(--space-8); background: linear-gradient(180deg, color-mix(in srgb, var(--color-primary) 4%, var(--color-surface)), var(--color-surface)); text-align: center; transition: transform var(--transition), border-color var(--transition), background var(--transition); }
-    .dropzone.drag { transform: translateY(-2px); border-color: var(--color-primary); background: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface)); }
+    .dropzone { position: relative; overflow: hidden; border: 1.5px solid color-mix(in srgb, var(--color-primary) 24%, var(--color-border)); border-radius: 28px; padding: var(--space-8); background: linear-gradient(180deg, rgba(255,255,255,.96), rgba(255,255,255,.72)); text-align: center; transition: transform var(--transition), border-color var(--transition), background var(--transition), box-shadow var(--transition); box-shadow: inset 0 1px 0 rgba(255,255,255,.7); }
+    .dropzone::before { content: ''; position: absolute; inset: -2px; background: linear-gradient(90deg, transparent, rgba(15,118,110,.08), transparent); transform: translateX(-120%); opacity: 0; transition: opacity .2s; }
+    .dropzone.drag { transform: translateY(-2px) scale(1.01); border-color: var(--color-primary); background: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface)); box-shadow: 0 18px 50px rgba(15,118,110,.12); }
+    .dropzone.drag::before { opacity: 1; animation: sweep 1.2s linear infinite; }
+    @keyframes sweep { from { transform: translateX(-120%); } to { transform: translateX(120%); } }
     .button-row, .settings-grid { display: grid; gap: var(--space-3); }
     .settings-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
     .field { display: grid; gap: .45rem; }
@@ -71,19 +74,19 @@
     .checkboxes { display: grid; gap: .65rem; margin-top: var(--space-3); }
     .check { display: flex; align-items: flex-start; gap: .75rem; padding: .8rem 1rem; border-radius: var(--radius-lg); background: var(--color-surface-2); border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent); }
     .check input { margin-top: .25rem; }
-    .btn { min-height: 50px; border-radius: 999px; border: none; padding: .9rem 1.2rem; cursor: pointer; font-weight: 700; transition: transform var(--transition), background var(--transition), opacity var(--transition); }
+    .btn { min-height: 54px; border-radius: 18px; border: none; padding: .95rem 1.2rem; cursor: pointer; font-weight: 700; transition: transform var(--transition), background var(--transition), opacity var(--transition), box-shadow var(--transition); box-shadow: var(--shadow-sm); }
     .btn:hover { transform: translateY(-1px); }
     .btn:active { transform: translateY(0); }
-    .btn-primary { background: var(--color-primary); color: var(--color-text-inverse); }
-    .btn-primary:hover { background: var(--color-primary-hover); }
-    .btn-secondary { background: var(--color-surface-2); color: var(--color-text); border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent); }
+    .btn-primary { background: linear-gradient(180deg, color-mix(in srgb, var(--color-primary) 95%, white), var(--color-primary)); color: var(--color-text-inverse); }
+    .btn-primary:hover { background: var(--color-primary-hover); box-shadow: 0 14px 30px rgba(15,118,110,.22); }
+    .btn-secondary { background: var(--color-surface-2); color: var(--color-text); border: 1px solid var(--color-border); }
     .btn-danger { background: color-mix(in srgb, var(--color-error) 12%, var(--color-surface-2)); color: var(--color-error); border: 1px solid color-mix(in srgb, var(--color-error) 18%, transparent); }
     .muted { color: var(--color-text-muted); font-size: var(--text-sm); }
     .status { margin-top: var(--space-4); display: grid; gap: .7rem; }
     .status-line { padding: .9rem 1rem; background: var(--color-surface-2); border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent); border-radius: var(--radius-lg); font-size: var(--text-sm); }
     .status-line strong { color: var(--color-primary); }
     .queue { display: grid; gap: .8rem; max-height: 520px; overflow: auto; padding-right: .2rem; }
-    .file-card { display: grid; grid-template-columns: 72px 1fr auto; gap: var(--space-4); align-items: center; padding: 1rem; border-radius: var(--radius-lg); background: var(--color-surface-2); border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent); }
+    .file-card { display: grid; grid-template-columns: 72px 1fr auto; gap: var(--space-4); align-items: center; padding: 1rem; border-radius: 22px; background: linear-gradient(180deg, rgba(255,255,255,.96), rgba(255,255,255,.82)); border: 1px solid var(--color-border); }
     .cover-thumb { width: 72px; height: 72px; border-radius: 16px; object-fit: cover; background: var(--color-surface-offset); }
     .file-meta h4 { margin: 0 0 .2rem; font-size: 1rem; }
     .file-meta p { margin: 0; color: var(--color-text-muted); font-size: var(--text-sm); }
@@ -93,19 +96,23 @@
     .progress-bar { height: 8px; border-radius: 999px; overflow: hidden; background: var(--color-surface-offset); margin-bottom: .35rem; }
     .progress-bar > span { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--color-primary), var(--color-blue)); transition: width .2s linear; }
     .footer-note { margin-top: var(--space-6); color: var(--color-text-muted); font-size: var(--text-sm); }
+    @keyframes floaty { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+    .hero-main, .side-panel { animation: floaty 8s ease-in-out infinite; }
     .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
     .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
     a.inline-link { color: var(--color-primary); text-decoration: none; }
     @media (max-width: 980px) { .hero, .grid { grid-template-columns: 1fr; } }
     @media (max-width: 640px) {
-      .shell { width: min(100% - 1rem, 1180px); padding-top: 1rem; }
-      .hero-main, .side-panel, .panel { padding: 1rem; }
+      .shell { width: min(100% - .85rem, 1180px); padding-top: .8rem; }
+      .hero-main, .side-panel, .panel { padding: .95rem; }
       .settings-grid, .two-col, .hero-points { grid-template-columns: 1fr; }
       .file-card { grid-template-columns: 56px 1fr; }
       .progress-wrap { grid-column: 1 / -1; width: 100%; text-align: left; }
-      .cover-thumb { width: 56px; height: 56px; border-radius: 12px; }
-      .title { font-size: 1.35rem; }
-      .hero-main h2 { font-size: clamp(2rem, 7vw, 2.7rem); }
+      .cover-thumb { width: 56px; height: 56px; border-radius: 14px; }
+      .title { font-size: 1.25rem; }
+      .hero-main h2 { font-size: clamp(1.8rem, 7vw, 2.5rem); }
+      .btn { min-height: 58px; }
+      .dropzone { padding: 1rem; }
     }
   </style>
 </head>
@@ -126,19 +133,24 @@
           <p class="subtitle">Smartphone-optimiert, lokal im Browser, ohne Server-Upload.</p>
         </div>
       </div>
-      <button class="theme-toggle" type="button" data-theme-toggle aria-label="Farbschema wechseln">◐</button>
+      <div style="display:flex; gap:.5rem; align-items:center; flex-wrap:wrap; justify-content:flex-end">
+        <button class="theme-toggle" type="button" data-theme-toggle aria-label="Farbschema wechseln">◐</button>
+        <button class="theme-toggle" type="button" data-preset="teal" aria-label="Blaugrün" title="Blaugrün" style="background:#0f766e;color:white">T</button>
+        <button class="theme-toggle" type="button" data-preset="pink" aria-label="Pink" title="Pink" style="background:#db2777;color:white">P</button>
+        <button class="theme-toggle" type="button" data-preset="gray" aria-label="Grau" title="Grau" style="background:#6b7280;color:white">G</button>
+      </div>
     </header>
 
     <section class="hero">
       <article class="card hero-main">
-        <span class="eyebrow">TAF → MP3 / M4A / OGG</span>
-        <h2>Konvertiert TAF-Dateien direkt auf Handy und Computer – inklusive Metadaten, Cover, Kapitel und Batch-Export.</h2>
-        <p>Die App bildet die Kernlogik deines Python-Skripts im Browser nach: Sie entfernt den 4096-Byte-Header, berechnet den Audio-Hash, gleicht ihn mit der Tonies-Datenbank ab, lädt optional das Cover, erkennt Tags und erzeugt zusätzlich eine klangkiste.json. [file:1][web:13]</p>
+        <span class="eyebrow">TAF Konverter</span>
+        <h2>Schnell. Modern. Direkt im Browser.</h2>
+        <p>Wähle deine TAF-Dateien aus und starte die Umwandlung mit wenigen Klicks.</p>
         <div class="hero-points">
-          <div class="pill">Lokale Verarbeitung im Browser</div>
-          <div class="pill">Mehrere Dateien gleichzeitig</div>
-          <div class="pill">ZIP-Download aller Ergebnisse</div>
-          <div class="pill">Cover, Kommentar, Genre und Qualität</div>
+          <div class="pill">MP3 / M4A / OGG</div>
+          <div class="pill">Batch-Verarbeitung</div>
+          <div class="pill">Cover & JSON</div>
+          <div class="pill">Mobil & Desktop</div>
         </div>
       </article>
       <aside class="card side-panel">
@@ -150,7 +162,7 @@
 
     <section class="grid">
       <article class="card panel">
-        <h3>Dateien und Einstellungen</h3>
+        <h3>Konvertieren</h3>
         <div id="dropzone" class="dropzone" tabindex="0" role="button" aria-label="TAF Dateien auswählen oder hineinziehen">
           <strong>Dateien hier hineinziehen</strong>
           <p class="muted">oder unten tippen, um .taf-Dateien auszuwählen.</p>
@@ -212,16 +224,16 @@
       </article>
 
       <article class="card panel">
-        <h3>Warteschlange</h3>
+        <h3>Vorschau</h3>
         <div id="queue" class="queue"></div>
-        <p class="footer-note">Hinweis: GitHub Pages ist statisch. Deshalb ist die Browser-Lösung hier praktischer als GitHub Actions, weil du TAF-Dateien direkt lokal auswählen und sofort auf Handy oder PC verarbeiten kannst. [web:13]</p>
+        <p class="footer-note">Browser-Variante für GitHub Pages und mobile Geräte.</p>
       </article>
     </section>
   </main>
 
   <script type="module">
     import { FFmpeg } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js';
-    import { fetchFile } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js';
+    import { fetchFile, toBlobURL } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js';
     import JSZip from 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm';
 
     const HEADER_SIZE = 4096;
@@ -282,6 +294,24 @@
         current = current === 'dark' ? 'light' : 'dark';
         document.documentElement.setAttribute('data-theme', current);
       });
+      document.querySelectorAll('[data-preset]').forEach(button => {
+        button.addEventListener('click', () => applyPreset(button.dataset.preset));
+      });
+    }
+
+    function applyPreset(preset) {
+      const root = document.documentElement;
+      const presets = {
+        teal: { primary: '#0f766e', hover: '#115e59', hi: '#d6f3ef', badge: '#0ea5a0' },
+        pink: { primary: '#db2777', hover: '#be185d', hi: '#fce7f3', badge: '#ec4899' },
+        gray: { primary: '#4b5563', hover: '#374151', hi: '#e5e7eb', badge: '#6b7280' }
+      };
+      const p = presets[preset] || presets.teal;
+      root.style.setProperty('--color-primary', p.primary);
+      root.style.setProperty('--color-primary-hover', p.hover);
+      root.style.setProperty('--color-primary-highlight', p.hi);
+      root.style.setProperty('--color-blue', p.badge);
+      localStorage.setItem('taf-preset', preset);
     }
 
     function setStatus(text) { els.statusText.textContent = text; }
@@ -418,10 +448,13 @@
       if (state.ffmpegLoaded) return state.ffmpeg;
       setEngineStatus('FFmpeg.wasm wird geladen ...');
       const ffmpeg = new FFmpeg();
-      await ffmpeg.load({
-        coreURL: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js',
-        wasmURL: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm'
-      });
+      const baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@0.12.10/dist/esm';
+      const [coreURL, wasmURL, workerURL] = await Promise.all([
+        toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
+        toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+        toBlobURL(`${baseURL}/ffmpeg-core.worker.js`, 'text/javascript')
+      ]);
+      await ffmpeg.load({ coreURL, wasmURL, workerURL });
       state.ffmpeg = ffmpeg;
       state.ffmpegLoaded = true;
       setEngineStatus('FFmpeg.wasm geladen und einsatzbereit.');
@@ -431,7 +464,7 @@
     async function fetchCoverBlob(url) {
       if (!url) return null;
       try {
-        const res = await fetch(url);
+        const res = await fetch(url, { mode: 'cors' });
         if (!res.ok) return null;
         return await res.blob();
       } catch {
@@ -496,6 +529,7 @@
             <h4>${item.displayTitle || item.file.name}</h4>
             <p>${(item.meta?.series || 'Unbekannte Serie')} · ${item.format.toUpperCase()} · ${Math.round(item.file.size / 1024 / 1024 * 10) / 10} MB</p>
             <div class="taglist">${(item.tags || []).slice(0, 6).map(tag => `<span class="tag">${tag}</span>`).join('')}</div>
+            ${(item.trackList && item.trackList.length) ? `<div class="muted" style="margin-top:.5rem">Tracks: ${item.trackList.slice(0,5).join(' · ')}${item.trackList.length > 5 ? ' …' : ''}</div>` : ''}
           </div>
           <div class="progress-wrap">
             <div class="progress-bar"><span style="width:${item.progress || 0}%"></span></div>
@@ -537,7 +571,8 @@
         coverBlob: null,
         coverObjectUrl: null,
         chapters: getChaptersRobust(uint8),
-        pageMap: scanOggTimestamps(uint8)
+        pageMap: scanOggTimestamps(uint8),
+        trackList: (meta.tracks || meta['track-desc'] || meta.trackList || [])
       };
       if (coverUrl) {
         const blob = await fetchCoverBlob(coverUrl);
@@ -717,7 +752,7 @@
           meta: { series: 'Demo-Serie', description: 'Beispielbeschreibung für Anzeige und Tags.', age: 4, genre: 'Hörspiel', runtime: 3120 },
           displayTitle: 'Demo-Serie - Folge 1',
           status: 'Demo', progress: 100, format: els.formatSelect.value,
-          tags: ['Abenteuer', 'Hörspiel'], coverBlob: null, coverObjectUrl: null, chapters: [0], pageMap: {}
+          tags: ['Abenteuer', 'Hörspiel'], coverBlob: null, coverObjectUrl: null, chapters: [0], pageMap: {}, trackList: ['Intro', 'Kapitel 1']
         }
       ];
       renderQueue();
@@ -749,6 +784,8 @@
 
     async function init() {
       setTheme();
+      const savedPreset = localStorage.getItem('taf-preset');
+      if (savedPreset) applyPreset(savedPreset);
       bindEvents();
       initDragAndDrop();
       renderQueue();
