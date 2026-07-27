@@ -513,7 +513,7 @@
             <p>TAF-Konverter für Browser, Smartphone und GitHub Pages.</p>
           </div>
         </div>
-        <div class="topactions"><a class="btn btn-secondary" href="https://github.com/basecore/taf-klangkiste" target="_blank" rel="noreferrer">GitHub</a> <span style="font-weight:800;color:var(--muted)">v1.1.0</span>
+        <div class="topactions">
           <button class="iconbtn" type="button" id="themeBtn" aria-label="Hell/Dunkel umschalten">◐</button>
         </div>
       </div>
@@ -592,6 +592,7 @@
           <button class="btn btn-primary" id="convertBtn" type="button">Konvertierung starten</button>
           <button class="btn btn-secondary" id="downloadJsonBtn" type="button">Nur JSON laden</button>
           <button class="btn btn-secondary" id="demoBtn" type="button">Demo laden</button>
+        <button class="btn btn-danger" id="stopBtn" type="button">Stopp</button>
           <button class="btn btn-danger" id="clearBtn" type="button">Liste leeren</button>
         </div>
 
@@ -621,6 +622,28 @@
       <div style="margin-top:6px">Klangkiste Go · gebaut für GitHub Pages und Smartphones</div>
     </footer>
   </main>
+  <div class="modal-backdrop" id="detailModal">
+    <div class="modal">
+      <div class="modal-head">
+        <div>
+          <h3 id="modalTitle">Details</h3>
+          <div style="color:var(--muted); margin-top:4px" id="modalSubtitle"></div>
+        </div>
+        <button class="btn btn-secondary" id="closeModalBtn" type="button">Schließen</button>
+      </div>
+      <div class="modal-grid">
+        <img class="modal-cover" id="modalCover" alt="Cover">
+        <div>
+          <table class="meta-table">
+            <tbody id="modalMeta"></tbody>
+          </table>
+          <div style="margin-top:12px; font-weight:700">Trackliste</div>
+          <ol class="modal-list" id="modalTracks"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
 
   <script type="module">
     import { FFmpeg } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js';
@@ -855,9 +878,32 @@
       setTimeout(() => URL.revokeObjectURL(url), 1200);
     }
 
-    function syncJsonButton() {
-      els.downloadJsonBtn.style.display = els.createJson.checked ? 'inline-flex' : 'none';
+
+    function openModal(item) {
+      if (!item) return;
+      const meta = item.meta || {};
+      els.modalTitle.textContent = item.displayTitle || item.file.name;
+      els.modalSubtitle.textContent = meta.web || meta.series || '';
+      els.modalCover.src = item.coverUrl || item.coverObjectUrl || '';
+      els.modalCover.alt = item.displayTitle || 'Cover';
+      els.modalMeta.innerHTML = `
+        <tr><td>Serie</td><td>${meta.series || '—'}</td></tr>
+        <tr><td>Episode</td><td>${meta.episode || '—'}</td></tr>
+        <tr><td>Dauer</td><td>${meta.runtime ? `${meta.runtime} min` : '—'}</td></tr>
+        <tr><td>Alter</td><td>${meta.age || '—'}</td></tr>
+        <tr><td>Sprache</td><td>${meta.language || '—'}</td></tr>
+        <tr><td>Kategorie</td><td>${meta.category || '—'}</td></tr>
+        <tr><td>Hash</td><td>${item.hash || '—'}</td></tr>
+        <tr><td>Audio-ID</td><td>${meta.audio_id || meta['audio-id'] || '—'}</td></tr>
+        <tr><td>Größe</td><td>${meta.size || '—'}</td></tr>
+        <tr><td>Web</td><td>${meta.web ? `<a href="${meta.web}" target="_blank" rel="noreferrer">Tonies-Seite öffnen</a>` : '—'}</td></tr>
+      `;
+      const tracks = meta['track-desc'] || meta.tracks || [];
+      els.modalTracks.innerHTML = tracks.length ? tracks.map(t => `<li>${t}</li>`).join('') : '<li>Keine Trackliste vorhanden.</li>';
+      els.detailModal.style.display = 'flex';
     }
+
+    function closeModal() { els.detailModal.style.display = 'none'; }
 
     function renderQueue() {
       els.queue.innerHTML = '';
@@ -1034,9 +1080,7 @@
       const outputName = `${outputBase}.${format}`;
       const cueName = `${outputBase}.cue`;
       const commentLimit = Math.max(0, Number(els.commentLimit.value || 0));
-      const comment = `${age ? `Alter: ${age}+
-
-` : ''}${desc || ''}`.slice(0, commentLimit || undefined);
+      const comment = `${age ? `Alter: ${age}+\n\n` : ''}${desc || ''}`.slice(0, commentLimit || undefined);
 
       log(`Konvertierung gestartet: ${title} → ${format.toUpperCase()}`, 'info');
 
@@ -1125,9 +1169,6 @@
       renderQueue();
       updateMetrics();
     }
-
-    els.createJson.addEventListener('change', syncJsonButton);
-    syncJsonButton();
 
     async function startConversion() {
       if (!state.files.length) {
@@ -1223,6 +1264,8 @@
       log('Demo-Eintrag geladen.', 'ok');
     }
 
+    function syncJsonButton() { els.downloadJsonBtn.style.display = els.createJson.checked ? 'inline-flex' : 'none'; }
+
     function initTheme() {
       const saved = localStorage.getItem('kg-theme');
       if (saved) document.documentElement.setAttribute('data-theme', saved);
@@ -1255,13 +1298,16 @@
         e.target.value = '';
       });
       els.convertBtn.addEventListener('click', startConversion);
-      els.downloadJsonBtn.addEventListener('click', downloadJsonOnly);
+      els.stopBtn.addEventListener('click', () => { state.abortRequested = true; setStatus('Abbruch angefordert …'); log('Abbruch angefordert.', 'warn'); });
+    els.downloadJsonBtn.addEventListener('click', downloadJsonOnly);
       els.demoBtn.addEventListener('click', loadDemo);
       els.clearBtn.addEventListener('click', clearQueue);
     }
 
     async function init() {
-      initTheme();
+      els.createJson.addEventListener('change', syncJsonButton);
+    syncJsonButton();
+    initTheme();
       initDnD();
       bindEvents();
       renderLogs();
