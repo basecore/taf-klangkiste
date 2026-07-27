@@ -701,15 +701,6 @@
       `).join('') : '<div class="logitem"><span class="dot"></span><div>Noch keine Log-Einträge.</div></div>';
     }
 
-    function renderLogs() {
-      els.logList.innerHTML = state.logs.length ? state.logs.map(entry => `
-        <div class="logitem ${entry.type}">
-          <span class="dot"></span>
-          <div><strong style="color:var(--text)">${entry.time}</strong> · ${entry.message}</div>
-        </div>
-      `).join('') : '<div class="logitem"><span class="dot"></span><div>Noch keine Log-Einträge.</div></div>';
-    }
-
     function updateMetrics() {
       els.metricFiles.textContent = String(state.files.length);
       els.metricConverted.textContent = String(state.converted);
