@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Klangkiste Go</title>
-  <meta name="description" content="TAF-Dateien direkt im Browser in MP3, M4A oder OGG konvertieren – mit Tonie-DB, Cover-Vorschau, Cloud-Modus, PAT-Test, Detailansicht und ZIP-Export." />
+  <meta name="description" content="TAF-Dateien direkt im Browser in MP3, M4A oder OGG konvertieren – mit Tonie-DB, Cover-Vorschau, Detailansicht und ZIP-Export." />
   <meta name="theme-color" content="#0f766e" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -424,6 +424,7 @@
     .candidate-card img{width:48px;height:48px;border-radius:12px;object-fit:cover;background:var(--bg2);}
     .candidate-card .cand-text strong{display:block; font-size:.95rem;}
     .candidate-card .cand-text span{color:var(--muted);font-size:.84rem;}
+    .confirm-actions{display:flex; gap:10px; flex-wrap:wrap;}
     @media (max-width: 980px){
       .hero,.grid{grid-template-columns:1fr}
       .queue{max-height:none}
@@ -473,7 +474,7 @@
     <article class="card hero-main">
       <span class="badge">Browser-Converter · mobil optimiert</span>
       <h2>TAF-Dateien direkt im Browser konvertieren.</h2>
-      <p>Mit Tonie-DB, Cover-Vorschau, Detailansicht, Log-Fenster, ZIP-Export und Cloud-Modus – ohne Server-Upload und passend für GitHub Pages.</p>
+      <p>Mit Tonie-DB, Cover-Vorschau, Detailansicht, Log-Fenster und ZIP-Export – ohne Server-Upload und passend für GitHub Pages.</p>
     </article>
     <aside class="card hero-side">
       <div class="metric"><strong id="metricFiles">0</strong><span>Dateien in der Warteschlange</span></div>
@@ -525,24 +526,12 @@
         <label class="check"><input type="checkbox" id="createJson" /><span><strong>klangkiste.json erzeugen</strong><br><span style="color:var(--muted)">Metadaten als JSON ausgeben.</span></span></label>
         <label class="check"><input type="checkbox" id="createCovers" checked /><span><strong>Cover separat speichern</strong><br><span style="color:var(--muted)">JPG-Dateien zusätzlich mit in das ZIP legen.</span></span></label>
         <label class="check"><input type="checkbox" id="zipAll" checked /><span><strong>Alles als ZIP herunterladen</strong><br><span style="color:var(--muted)">Praktisch für mehrere Dateien am Smartphone.</span></span></label>
-        <label class="check"><input type="checkbox" id="cloudMode" checked /><span><strong>Cloud-Modus 🔑</strong><br><span style="color:var(--muted)">Cover über GitHub Actions holen, wenn CORS blockt.</span></span></label>
-      </div>
-
-      <div class="settings" style="margin-top:12px">
-        <div class="field">
-          <label for="patInput">GitHub PAT</label>
-          <input id="patInput" type="text" placeholder="ghp_..." />
-        </div>
-        <div class="field">
-          <label for="workflowUrl">Workflow URL</label>
-          <input id="workflowUrl" type="text" value="https://github.com/YOUR_USER/YOUR_REPO/actions/workflows/cover-cloud.yml" />
-        </div>
       </div>
 
       <div class="actions">
         <button class="btn btn-primary" id="convertBtn" type="button">Konvertierung starten</button>
         <button class="btn btn-secondary" id="downloadJsonBtn" type="button" style="display:none">Nur JSON laden</button>
-        <button class="btn btn-secondary" id="testPatBtn" type="button">PAT testen</button>
+        <button class="btn btn-danger" id="stopBtn" type="button">Stopp</button>
       </div>
 
       <div class="statusbox">
@@ -552,7 +541,10 @@
       </div>
 
       <div class="logbox">
-        <div class="loghead"><strong>Log</strong><span style="color:var(--muted); font-size:.9rem">Import · DB · Cloud · Konvertierung</span></div>
+        <div class="loghead">
+          <strong>Log</strong>
+          <span style="color:var(--muted); font-size:.9rem">Import · DB · Konvertierung</span>
+        </div>
         <div class="loglist" id="logList"></div>
       </div>
     </article>
@@ -564,9 +556,13 @@
   </section>
 
   <footer class="footer">
-    <div>Klangkiste Go · GitHub Pages + Cloud-Modus</div>
+    <div>Klangkiste Go · gebaut für GitHub Pages und Smartphones</div>
     <div class="footer-meta">
-      <span>Version 1.4.0</span>
+      <span>Version <a href="https://github.com/basecore/taf-klangkiste/releases" target="_blank" rel="noreferrer" id="footerVersion">–</a></span>
+      <span>·</span>
+      <span>Stand: <span id="footerDate">–</span></span>
+      <span>·</span>
+      <a href="https://github.com/basecore/taf-klangkiste" target="_blank" rel="noreferrer">GitHub ↗</a>
     </div>
   </footer>
 </main>
@@ -644,12 +640,8 @@
     embedCover: document.getElementById('embedCover'),
     createJson: document.getElementById('createJson'),
     createCovers: document.getElementById('createCovers'),
-    zipAll: document.getElementById('zipAll'),
-    cloudMode: document.getElementById('cloudMode'),
-    patInput: document.getElementById('patInput'),
-    workflowUrl: document.getElementById('workflowUrl'),
     convertBtn: document.getElementById('convertBtn'),
-    testPatBtn: document.getElementById('testPatBtn'),
+    stopBtn: document.getElementById('stopBtn'),
     downloadJsonBtn: document.getElementById('downloadJsonBtn'),
     statusText: document.getElementById('statusText'),
     engineStatus: document.getElementById('engineStatus'),
@@ -669,8 +661,19 @@
     confirmDesc: document.getElementById('confirmDesc'),
     confirmCandidates: document.getElementById('confirmCandidates'),
     confirmSkipBtn: document.getElementById('confirmSkipBtn'),
-    confirmNoMatchBtn: document.getElementById('confirmNoMatchBtn')
+    confirmNoMatchBtn: document.getElementById('confirmNoMatchBtn'),
+    footerVersion: document.getElementById('footerVersion'),
+    footerDate: document.getElementById('footerDate')
   };
+
+  function initFooterMeta() {
+    els.footerVersion.textContent = APP_VERSION;
+    els.footerDate.textContent = APP_DATE;
+  }
+
+  function updateJsonBtnVisibility() {
+    els.downloadJsonBtn.style.display = els.createJson.checked ? '' : 'none';
+  }
 
   function log(message, type='info') {
     state.logs.unshift({ message, type, time: new Date().toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit', second:'2-digit' }) });
@@ -696,16 +699,11 @@
   function setStatus(text) { els.statusText.textContent = text; }
   function setDbStatus(text) { els.dbStatus.textContent = text; }
   function setEngineStatus(text) { els.engineStatus.textContent = text; }
-
-  function cleanFilename(name) {
-    return (name || '').replace(/[^w .-()äöüÄÖÜß]/g, '_').trim() || 'unbekannt';
-  }
-
+  function cleanFilename(name) { return (name || '').replace(/[^\w .\-()äöüÄÖÜß]/g, '_').trim() || 'unbekannt'; }
   function todayString() {
     const d = new Date();
     return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
   }
-
   function formatBytesToMB(bytes) {
     if (bytes == null || isNaN(Number(bytes))) return '—';
     return `${Math.max(1, Math.round(Number(bytes) / 1024 / 1024))} MB`;
@@ -775,37 +773,19 @@
     return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}:${String(f).padStart(2,'0')}`;
   }
 
-  function nearestPageGranule(pageMap, chapter) {
-    const keys = Object.keys(pageMap).map(Number).sort((a, b) => a - b);
-    if (!keys.length) return null;
-    const target = Number(chapter);
-    let best = keys[0];
-    for (const k of keys) {
-      if (k >= target) { best = k; break; }
-      best = k;
-    }
-    return pageMap[best] ?? best;
-  }
-
-  function buildCue(title, outputName, chapters, pageMap, trackList = [], dateStr = '') {
-    let out = `REM CREATED BY KLANGKISTE GO
-`;
-    if (dateStr) out += `REM DATE ${dateStr}
-`;
-    out += `TITLE "${String(title).replace(/"/g, "'")}"
-`;
-    out += `FILE "${outputName}" MP3
-`;
+  function buildCue(title, outputName, chapters, pageMap, trackList=[], dateStr='') {
+    let out = `REM CREATED BY KLANGKISTE GO\n`;
+    if (dateStr) out += `REM DATE ${dateStr}\n`;
+    out += `TITLE "${String(title).replace(/"/g, "'")}"\n`;
+    out += `FILE "${outputName}" MP3\n`;
     chapters.forEach((ch, idx) => {
-      const granule = nearestPageGranule(pageMap, ch);
-      const ts = granule != null ? granuleToCue(granule) : '00:00:00';
+      let ts = '00:00:00';
+      const key = ch > 0 ? ch - 1 : 0;
+      if (pageMap && pageMap[key] != null) ts = granuleToCue(pageMap[key]);
       const tName = trackList[idx] || `Kapitel ${idx + 1}`;
-      out += `  TRACK ${String(idx + 1).padStart(2,'0')} AUDIO
-`;
-      out += `    TITLE "${String(tName).replace(/"/g, "'")}"
-`;
-      out += `    INDEX 01 ${ts}
-`;
+      out += `  TRACK ${String(idx + 1).padStart(2,'0')} AUDIO\n`;
+      out += `    TITLE "${String(tName).replace(/"/g, "'")}"\n`;
+      out += `    INDEX 01 ${ts}\n`;
     });
     return out;
   }
@@ -830,13 +810,13 @@
 
   function findFallbackCandidates(file) {
     const sizeBytes = file.size;
-    const baseName = file.name.replace(/.taf$/i, '').toLowerCase().trim();
+    const baseName = file.name.replace(/\.taf$/i, '').toLowerCase().trim();
     const scored = state.dbRaw.map(entry => {
       let score = 0;
       const series = (entry.series || entry.title || '').toLowerCase();
       const episode = (entry.episode || '').toLowerCase();
       const combined = `${series} ${episode}`;
-      const nameWords = baseName.split(/[s_-]+/).filter(Boolean);
+      const nameWords = baseName.split(/[\s_\-]+/).filter(Boolean);
       for (const w of nameWords) if (w.length > 2 && combined.includes(w)) score += 3;
       if (entry.size && sizeBytes > 0) {
         const entrySize = Number(entry.size);
@@ -915,6 +895,38 @@
   }
 
   function closeModal() { els.detailModal.style.display = 'none'; }
+
+  function renderQueue() {
+    els.queue.innerHTML = '';
+    if (!state.files.length) {
+      els.queue.innerHTML = '<div class="statusline">Noch keine Dateien ausgewählt.</div>';
+      updateMetrics();
+      return;
+    }
+    state.files.forEach(item => {
+      const node = document.createElement('article');
+      node.className = 'filecard';
+      const placeholder = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72"><rect width="100%" height="100%" rx="18" fill="#d9d4cb"/><path d="M22 48V24l28 12v12z" fill="#8f8a80"/></svg>');
+      const coverSrc = item.coverObjectUrl || item.coverUrl || placeholder;
+      const fallbackTag = item.isFallback ? '<span class="tag fallback">⚠ Fallback</span>' : '';
+      node.innerHTML = `
+        <img class="cover" src="${coverSrc}" alt="Cover Vorschau">
+        <div class="filemeta">
+          <h4>${item.displayTitle || item.file.name}</h4>
+          <p>${(item.meta?.series || 'Unbekannte Serie')} · ${item.format.toUpperCase()} · ${formatBytesToMB(item.file.size)}</p>
+          ${item.metaPreview ? `<p>${item.metaPreview}</p>` : ''}
+          <div class="tags">${(item.tags || []).slice(0, 6).map(tag => `<span class="tag">${tag}</span>`).join('')}${fallbackTag}</div>
+        </div>
+        <div class="progresswrap">
+          <div class="progressbar"><span style="width:${item.progress || 0}%"></span></div>
+          <div style="color:var(--muted); font-size:.88rem">${item.status || 'Wartet'}</div>
+        </div>
+      `;
+      node.addEventListener('click', () => openModal(item));
+      els.queue.appendChild(node);
+    });
+    updateMetrics();
+  }
 
   async function fetchToniesDb() {
     if (state.dbLoaded) return;
@@ -1016,62 +1028,24 @@
     return pageMap;
   }
 
-  async function imageUrlToBlobFallback(url) {
+  async function imageUrlToJpegBlob(url, quality = 0.92) {
     try {
       const res = await fetch(url, { mode: 'cors' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return await res.blob();
-    } catch {
+      const blob = await res.blob();
+      const bitmap = await createImageBitmap(blob);
+      const canvas = document.createElement('canvas');
+      canvas.width = bitmap.width;
+      canvas.height = bitmap.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(bitmap, 0, 0);
+      const out = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', quality));
+      bitmap.close?.();
+      if (!out) throw new Error('toBlob failed');
+      return out;
+    } catch (err) {
       return null;
     }
-  }
-
-  async function fetchImageViaGitHubActions(coverUrl, outputBase, format = 'jpg') {
-    const repoUrl = els.workflowUrl.value.trim();
-    const pat = els.patInput.value.trim();
-    if (!repoUrl || !pat) return null;
-    const m = repoUrl.match(/github.com/([^/]+)/([^/]+)/actions/workflows/([^/?#]+)/i);
-    if (!m) throw new Error('Workflow-URL ungültig');
-    const owner = m[1], repo = m[2], workflow = m[3];
-    const dispatchRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/actions/workflows/${workflow}/dispatches`, {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/vnd.github+json',
-        'Authorization': `Bearer ${pat}`,
-        'X-GitHub-Api-Version': '2022-11-28',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        ref: 'main',
-        inputs: {
-          cover_url: coverUrl,
-          output_name: outputBase,
-          output_format: format,
-          quality: '0.92'
-        }
-      })
-    });
-    if (!dispatchRes.ok) throw new Error(`GitHub dispatch fehlgeschlagen: ${dispatchRes.status}`);
-    return true;
-  }
-
-  async function resolveCover(meta, outputBase) {
-    const coverUrl = meta.image || meta.pic || null;
-    if (!coverUrl) return { coverBlob: null, coverObjectUrl: null, coverUrl: null, coverFormat: null };
-
-    let coverBlob = await imageUrlToBlobFallback(coverUrl);
-    if (!coverBlob && els.cloudMode.checked) {
-      log('CORS blockiert – Cloud-Modus startet GitHub Action …', 'warn');
-      try {
-        await fetchImageViaGitHubActions(coverUrl, outputBase, 'jpg');
-        log('GitHub Actions Workflow gestartet.', 'ok');
-      } catch (err) {
-        log(`Cloud-Modus fehlgeschlagen: ${err.message}`, 'bad');
-      }
-    }
-
-    const coverObjectUrl = coverBlob ? URL.createObjectURL(coverBlob) : null;
-    return { coverBlob, coverObjectUrl, coverUrl, coverFormat: coverBlob?.type || null };
   }
 
   async function enrichFile(file) {
@@ -1100,12 +1074,33 @@
 
     const series = meta.series || '';
     const episode = meta.episode || '';
-    const title = series && episode ? `${series} - ${episode}` : (series || episode || meta.title || file.name.replace(/.taf$/i, ''));
+    const title = series && episode ? `${series} - ${episode}` : (series || episode || meta.title || file.name.replace(/\.taf$/i, ''));
     const desc = meta.description || '';
     const age = Number.parseInt(meta.age || 0, 10) || 0;
     const genre = meta.genre || 'Hörspiel';
     const tags = detectTags(title, desc, genre);
-    const coverData = await resolveCover(meta, cleanFilename(title));
+
+
+    const coverUrl = meta.image || meta.pic || null;
+    let coverBlob = null;
+    let coverObjectUrl = null;
+    
+    if (coverUrl) {
+      coverBlob = await imageUrlToJpegBlob(coverUrl, 0.92);
+    
+      if (coverBlob) {
+        coverObjectUrl = URL.createObjectURL(coverBlob);
+        log('Cover erfolgreich als JPG geladen.', 'ok');
+      } else {
+        log('Cover nur für Anzeige verfügbar, nicht als JPG speicherbar.', 'warn');
+      }
+    }
+
+
+    function renderCoverPreview(url, imgEl) {
+      imgEl.crossOrigin = 'anonymous';
+      imgEl.src = url;
+    }
 
     const item = {
       file,
@@ -1118,9 +1113,9 @@
       progress: 0,
       format: els.formatSelect.value,
       tags,
-      coverUrl: coverData.coverUrl,
-      coverBlob: coverData.coverBlob,
-      coverObjectUrl: coverData.coverObjectUrl,
+      coverUrl,
+      coverBlob,
+      coverObjectUrl,
       chapters: getChaptersRobustFromTaf(uint8),
       pageMap: scanOggTimestampsFromTaf(uint8),
       trackList: meta['track-desc'] || meta.tracks || meta.trackList || [],
@@ -1129,9 +1124,9 @@
     };
 
     if (Object.keys(meta).length) log(`DB-Treffer: ${title}${isFallback ? ' (Fallback)' : ''}`, isFallback ? 'warn' : 'ok');
-    if (coverData.coverBlob) log('Cover erfolgreich geladen.', 'ok');
-    else log('Cover konnte nicht als Blob geladen werden.', 'warn');
-
+    if (coverUrl) log('Cover-URL gefunden.', 'ok');
+    log(`Chapters: ${item.chapters.join(', ')}`, 'info');
+    log(`PageMap keys: ${Object.keys(item.pageMap).slice(0, 10).join(', ') || 'leer'}`, 'info');
     return item;
   }
 
@@ -1154,38 +1149,6 @@
     log(`${state.files.length} Datei(en) für die Konvertierung bereit.`, 'ok');
   }
 
-  function renderQueue() {
-    els.queue.innerHTML = '';
-    if (!state.files.length) {
-      els.queue.innerHTML = '<div class="statusline">Noch keine Dateien ausgewählt.</div>';
-      updateMetrics();
-      return;
-    }
-    state.files.forEach(item => {
-      const node = document.createElement('article');
-      node.className = 'filecard';
-      const placeholder = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72"><rect width="100%" height="100%" rx="18" fill="#d9d4cb"/><path d="M22 48V24l28 12v12z" fill="#8f8a80"/></svg>');
-      const coverSrc = item.coverObjectUrl || item.coverUrl || placeholder;
-      const fallbackTag = item.isFallback ? '<span class="tag fallback">⚠ Fallback</span>' : '';
-      node.innerHTML = `
-        <img class="cover" src="${coverSrc}" alt="Cover Vorschau">
-        <div class="filemeta">
-          <h4>${item.displayTitle || item.file.name}</h4>
-          <p>${(item.meta?.series || 'Unbekannte Serie')} · ${item.format.toUpperCase()} · ${formatBytesToMB(item.file.size)}</p>
-          ${item.metaPreview ? `<p>${item.metaPreview}</p>` : ''}
-          <div class="tags">${(item.tags || []).slice(0, 6).map(tag => `<span class="tag">${tag}</span>`).join('')}${fallbackTag}</div>
-        </div>
-        <div class="progresswrap">
-          <div class="progressbar"><span style="width:${item.progress || 0}%"></span></div>
-          <div style="color:var(--muted); font-size:.88rem">${item.status || 'Wartet'}</div>
-        </div>
-      `;
-      node.addEventListener('click', () => openModal(item));
-      els.queue.appendChild(node);
-    });
-    updateMetrics();
-  }
-
   async function convertOne(item, index, total, zipFolder) {
     const ffmpeg = await ensureFfmpeg();
     const dateStr = todayString();
@@ -1193,7 +1156,7 @@
     item.progress = 5;
     renderQueue();
 
-    const title = item.displayTitle || item.file.name.replace(/.taf$/i, '');
+    const title = item.displayTitle || item.file.name.replace(/\.taf$/i, '');
     const meta = item.meta || {};
     const series = meta.series || '';
     const desc = meta.description || '';
@@ -1207,10 +1170,7 @@
     const outputName = `${outputBase}.${format}`;
     const cueName = `${outputBase}.cue`;
     const commentLimit = Math.max(0, Number(els.commentLimit.value || 0));
-    const comment = `${age ? `Alter: ${age}+
-
-` : ''}${desc || ''}${item.isFallback ? '
-[Metadaten via Fallback – nicht verifiziert]' : ''}`.slice(0, commentLimit || undefined);
+    const comment = `${age ? `Alter: ${age}+\n\n` : ''}${desc || ''}${item.isFallback ? '\n[Metadaten via Fallback – nicht verifiziert]' : ''}`.slice(0, commentLimit || undefined);
 
     log(`Konvertierung gestartet: ${title} → ${format.toUpperCase()}${item.isFallback ? ' ⚠ Fallback' : ''}`, 'info');
 
@@ -1242,13 +1202,18 @@
 
       if (format === 'mp3') {
         if (coverEmbedded) {
-          args.push('-map', '0:a', '-map', '1:v', '-c:a', 'libmp3lame', '-b:a', els.qualitySelect.value, '-id3v2_version', '3', '-c:v', 'copy', '-metadata:s:v', 'title=Album cover', '-metadata:s:v', 'comment=Cover (front)', '-disposition:v', 'attached_pic');
+          args.push('-map', '0:a', '-map', '1:v');
+          args.push('-c:a', 'libmp3lame', '-b:a', els.qualitySelect.value, '-id3v2_version', '3');
+          args.push('-c:v', 'copy', '-metadata:s:v', 'title=Album cover', '-metadata:s:v', 'comment=Cover (front)');
+          args.push('-disposition:v', 'attached_pic');
         } else {
           args.push('-c:a', 'libmp3lame', '-b:a', els.qualitySelect.value, '-id3v2_version', '3');
         }
       } else if (format === 'm4a') {
         if (coverEmbedded) {
-          args.push('-map', '0:a', '-map', '1:v', '-c:a', 'aac', '-b:a', els.qualitySelect.value, '-c:v', 'mjpeg');
+          args.push('-map', '0:a', '-map', '1:v');
+          args.push('-c:a', 'aac', '-b:a', els.qualitySelect.value);
+          args.push('-c:v', 'mjpeg');
         } else {
           args.push('-c:a', 'aac', '-b:a', els.qualitySelect.value);
         }
@@ -1362,7 +1327,7 @@
   function downloadJsonOnly() {
     const entries = state.generatedEntries.length ? state.generatedEntries : state.files.map(item => {
       const meta = item.meta || {};
-      const title = item.displayTitle || item.file.name.replace(/.taf$/i, '');
+      const title = item.displayTitle || item.file.name.replace(/\.taf$/i, '');
       const outputBase = cleanFilename(title);
       const outputName = `${outputBase}.${els.formatSelect.value}`;
       return buildKlangkisteEntry(
@@ -1388,28 +1353,15 @@
     log('Nur JSON wurde heruntergeladen.', 'info');
   }
 
-  async function testPat() {
-    const token = els.patInput.value.trim();
-    const repoUrl = els.workflowUrl.value.trim();
-    if (!token || !repoUrl) {
-      log('PAT oder Workflow-URL fehlt.', 'warn');
-      return;
-    }
-    const m = repoUrl.match(/github.com/([^/]+)/([^/]+)/actions/workflows/([^/?#]+)/i);
-    if (!m) {
-      log('Workflow-URL ungültig.', 'bad');
-      return;
-    }
-    const owner = m[1], repo = m[2], workflow = m[3];
-    const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/actions/workflows/${workflow}`, {
-      headers: {
-        'Accept': 'application/vnd.github+json',
-        'Authorization': `Bearer ${token}`,
-        'X-GitHub-Api-Version': '2022-11-28'
-      }
-    });
-    if (res.ok) log('PAT-Test erfolgreich.', 'ok');
-    else log(`PAT-Test fehlgeschlagen: HTTP ${res.status}`, 'bad');
+  function clearQueue() {
+    state.files.forEach(item => item.coverObjectUrl && URL.revokeObjectURL(item.coverObjectUrl));
+    state.files = [];
+    state.generatedEntries = [];
+    state.converted = 0;
+    renderQueue();
+    updateMetrics();
+    setStatus('Liste geleert.');
+    log('Liste geleert.', 'warn');
   }
 
   function initTheme() {
@@ -1441,19 +1393,23 @@
       e.target.value = '';
     });
     els.convertBtn.addEventListener('click', startConversion);
-    document.getElementById('testPatBtn').addEventListener('click', testPat);
-    document.getElementById('downloadJsonBtn').addEventListener('click', downloadJsonOnly);
-    document.getElementById('closeModalBtn').addEventListener('click', closeModal);
-    els.detailModal.addEventListener('click', e => { if (e.target === els.detailModal) closeModal(); });
-    els.createJson.addEventListener('change', () => {
-      els.downloadJsonBtn.style.display = els.createJson.checked ? '' : 'none';
+    els.stopBtn.addEventListener('click', () => {
+      state.abortRequested = true;
+      setStatus('Abbruch angefordert …');
+      log('Abbruch angefordert.', 'warn');
     });
+    els.downloadJsonBtn.addEventListener('click', downloadJsonOnly);
+    els.closeModalBtn.addEventListener('click', closeModal);
+    els.detailModal.addEventListener('click', e => { if (e.target === els.detailModal) closeModal(); });
+    els.createJson.addEventListener('change', updateJsonBtnVisibility);
   }
 
   async function init() {
     initTheme();
     initDnD();
     bindEvents();
+    initFooterMeta();
+    updateJsonBtnVisibility();
     renderLogs();
     renderQueue();
     updateMetrics();
@@ -1462,7 +1418,6 @@
     await fetchToniesDb();
   }
 
-  els.downloadJsonBtn.style.display = els.createJson.checked ? '' : 'none';
   init();
 </script>
 </body>
