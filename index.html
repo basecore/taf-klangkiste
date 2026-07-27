@@ -282,6 +282,11 @@
       border:1px solid color-mix(in srgb, var(--brand) 22%, transparent);
       font-weight:700;
     }
+    .tag.fallback{
+      background:color-mix(in srgb, var(--warn) 14%, var(--card2));
+      color:var(--warn);
+      border-color:color-mix(in srgb, var(--warn) 28%, transparent);
+    }
     .progresswrap{
       grid-column:1 / -1;
       display:grid;
@@ -354,6 +359,10 @@
       font-size:.92rem;
     }
     .footer a{text-decoration:none; font-weight:700; color:var(--brand);}
+    .footer-meta{
+      display:flex; flex-wrap:wrap; justify-content:center; gap:12px;
+      margin-top:6px; font-size:.82rem; color:var(--muted);
+    }
     .modal-backdrop{
       position:fixed;
       inset:0;
@@ -418,6 +427,30 @@
       padding-left:18px;
     }
     .modal-list li{margin:4px 0; color:var(--text);}
+    /* Fallback confirm modal */
+    .confirm-modal{
+      width:min(520px,100%);
+      max-height:min(80vh,680px);
+      overflow:auto;
+      background:var(--card2);
+      border:1px solid var(--stroke);
+      border-radius:28px;
+      box-shadow:var(--shadow);
+      padding:22px;
+    }
+    .confirm-modal h3{margin:0 0 10px; font-family:var(--font2);}
+    .confirm-modal p{color:var(--muted); margin:0 0 14px;}
+    .confirm-candidates{display:grid; gap:8px; margin-bottom:16px;}
+    .candidate-card{
+      display:flex; gap:10px; align-items:center;
+      padding:10px 12px; border-radius:16px;
+      background:var(--card); border:1px solid var(--stroke); cursor:pointer;
+    }
+    .candidate-card:hover{border-color:var(--brand);}
+    .candidate-card img{width:48px;height:48px;border-radius:12px;object-fit:cover;background:var(--bg2);}
+    .candidate-card .cand-text strong{display:block; font-size:.95rem;}
+    .candidate-card .cand-text span{color:var(--muted);font-size:.84rem;}
+    .confirm-actions{display:flex; gap:10px; flex-wrap:wrap;}
     @media (max-width: 980px){
       .hero,.grid{grid-template-columns:1fr}
       .queue{max-height:none}
@@ -485,7 +518,7 @@
 
   <section class="grid">
     <article class="card panel">
-      <h3>Import & Einstellungen</h3>
+      <h3>Import &amp; Einstellungen</h3>
 
       <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="TAF Dateien auswählen oder hineinziehen">
         <strong>TAF-Dateien hier ablegen</strong>
@@ -531,7 +564,7 @@
 
       <div class="actions">
         <button class="btn btn-primary" id="convertBtn" type="button">Konvertierung starten</button>
-        <button class="btn btn-secondary" id="downloadJsonBtn" type="button">Nur JSON laden</button>
+        <button class="btn btn-secondary" id="downloadJsonBtn" type="button" style="display:none">Nur JSON laden</button>
         <button class="btn btn-secondary" id="demoBtn" type="button">Demo laden</button>
         <button class="btn btn-danger" id="stopBtn" type="button">Stopp</button>
         <button class="btn btn-danger" id="clearBtn" type="button">Liste leeren</button>
@@ -560,9 +593,17 @@
 
   <footer class="footer">
     <div>Klangkiste Go · gebaut für GitHub Pages und Smartphones</div>
+    <div class="footer-meta">
+      <span>Version <a href="https://github.com/basecore/taf-klangkiste/releases" target="_blank" rel="noreferrer" id="footerVersion">–</a></span>
+      <span>·</span>
+      <span>Stand: <span id="footerDate">–</span></span>
+      <span>·</span>
+      <a href="https://github.com/basecore/taf-klangkiste" target="_blank" rel="noreferrer">GitHub ↗</a>
+    </div>
   </footer>
 </main>
 
+<!-- Detail Modal -->
 <div class="modal-backdrop" id="detailModal">
   <div class="modal">
     <div class="modal-head">
@@ -585,10 +626,28 @@
   </div>
 </div>
 
+<!-- Fallback Confirm Modal -->
+<div class="modal-backdrop" id="confirmModal">
+  <div class="confirm-modal">
+    <div class="modal-head">
+      <h3 id="confirmTitle">Kein Treffer in der Tonie-DB</h3>
+      <button class="btn btn-secondary" id="confirmSkipBtn" type="button">Überspringen</button>
+    </div>
+    <p id="confirmDesc">Für diese Datei wurde kein Hash-Treffer gefunden. Mögliche Treffer anhand von Größe/Name:</p>
+    <div class="confirm-candidates" id="confirmCandidates"></div>
+    <div class="confirm-actions">
+      <button class="btn btn-danger" id="confirmNoMatchBtn" type="button">Ohne Metadaten fortfahren</button>
+    </div>
+  </div>
+</div>
+
 <script type="module">
   import { FFmpeg } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js';
   import { fetchFile, toBlobURL } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js';
   import JSZip from 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm';
+
+  const APP_VERSION = '1.1.0';
+  const APP_DATE    = new Date().toLocaleDateString('de-DE', { day:'2-digit', month:'2-digit', year:'numeric' });
 
   const FFMPEG_BASE = './assets/ffmpeg';
   const HEADER_SIZE = 4096;
@@ -598,6 +657,7 @@
   const state = {
     files: [],
     toniesDb: {},
+    dbRaw: [],
     dbLoaded: false,
     ffmpeg: null,
     ffmpegLoaded: false,
@@ -640,9 +700,29 @@
     modalSubtitle: document.getElementById('modalSubtitle'),
     modalCover: document.getElementById('modalCover'),
     modalMeta: document.getElementById('modalMeta'),
-    modalTracks: document.getElementById('modalTracks')
+    modalTracks: document.getElementById('modalTracks'),
+    confirmModal: document.getElementById('confirmModal'),
+    confirmTitle: document.getElementById('confirmTitle'),
+    confirmDesc: document.getElementById('confirmDesc'),
+    confirmCandidates: document.getElementById('confirmCandidates'),
+    confirmSkipBtn: document.getElementById('confirmSkipBtn'),
+    confirmNoMatchBtn: document.getElementById('confirmNoMatchBtn'),
+    footerVersion: document.getElementById('footerVersion'),
+    footerDate: document.getElementById('footerDate')
   };
 
+  // ── Footer meta ────────────────────────────────────────────────
+  function initFooterMeta() {
+    els.footerVersion.textContent = APP_VERSION;
+    els.footerDate.textContent = APP_DATE;
+  }
+
+  // ── JSON-button visibility ─────────────────────────────────────
+  function updateJsonBtnVisibility() {
+    els.downloadJsonBtn.style.display = els.createJson.checked ? '' : 'none';
+  }
+
+  // ── Logging ────────────────────────────────────────────────────
   function log(message, type='info') {
     const item = { message, type, time: new Date().toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit', second:'2-digit' }) };
     state.logs.unshift(item);
@@ -673,6 +753,11 @@
     return (name || '').replace(/[^\w .\-()äöüÄÖÜß]/g, '_').trim() || 'unbekannt';
   }
 
+  function todayString() {
+    const d = new Date();
+    return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
+  }
+
   async function sha1Hex(input) {
     const bytes = input instanceof Uint8Array ? input : new Uint8Array(input);
     const digest = await crypto.subtle.digest('SHA-1', bytes);
@@ -681,22 +766,25 @@
 
   function normalizeDb(jsonData) {
     const db = {};
+    const raw = [];
     if (Array.isArray(jsonData)) {
       for (const item of jsonData) {
         if (item?.article && item?.data) {
           for (const entry of item.data || []) {
+            raw.push(entry);
             for (const audioId of (entry.ids || [])) {
               const h = audioId?.hash;
               if (h) db[h.toLowerCase()] = entry;
             }
           }
         } else if (item?.hash) {
+          raw.push(item);
           const hashes = Array.isArray(item.hash) ? item.hash : [item.hash];
           for (const h of hashes) if (h) db[h.toLowerCase()] = item;
         }
       }
     }
-    return db;
+    return { db, raw };
   }
 
   function detectTags(title, desc, genre='') {
@@ -736,8 +824,12 @@
     return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}:${String(f).padStart(2,'0')}`;
   }
 
-  function buildCue(title, outputName, chapters, pageMap, trackList=[]) {
-    let out = `REM CREATED BY KLANGKISTE GO\nTITLE "${String(title).replace(/"/g, "'")}"\nFILE "${outputName}" ${outputName.toLowerCase().endsWith('.mp3') ? 'MP3' : 'WAVE'}\n`;
+  function buildCue(title, outputName, chapters, pageMap, trackList=[], dateStr='') {
+    const ext = outputName.split('.').pop().toLowerCase();
+    const fileType = ext === 'mp3' ? 'MP3' : 'WAVE';
+    let out = `REM CREATED BY KLANGKISTE GO\n`;
+    if (dateStr) out += `REM DATE ${dateStr}\n`;
+    out += `TITLE "${String(title).replace(/"/g, "'")}"\nFILE "${outputName}" ${fileType}\n`;
     chapters.forEach((ch, idx) => {
       let ts = '00:00:00';
       if (ch > 0 && (ch - 1) in pageMap) ts = granuleToCue(pageMap[ch - 1]);
@@ -765,6 +857,74 @@
     };
   }
 
+  // ── Fallback DB search ─────────────────────────────────────────
+  function findFallbackCandidates(file) {
+    const sizeBytes = file.size;
+    const baseName = file.name.replace(/\.taf$/i, '').toLowerCase().trim();
+    const scored = state.dbRaw.map(entry => {
+      let score = 0;
+      const series = (entry.series || entry.title || '').toLowerCase();
+      const episode = (entry.episode || '').toLowerCase();
+      const combined = `${series} ${episode}`;
+      // Name similarity (word overlap)
+      const nameWords = baseName.split(/[\s_\-]+/).filter(Boolean);
+      for (const w of nameWords) {
+        if (w.length > 2 && combined.includes(w)) score += 3;
+      }
+      // Size proximity (within 20%)
+      if (entry.size && sizeBytes > 0) {
+        const entrySize = Number(entry.size);
+        if (!isNaN(entrySize) && entrySize > 0) {
+          const ratio = Math.abs(entrySize - sizeBytes) / Math.max(entrySize, sizeBytes);
+          if (ratio < 0.05) score += 5;
+          else if (ratio < 0.10) score += 3;
+          else if (ratio < 0.20) score += 1;
+        }
+      }
+      return { entry, score };
+    });
+    return scored
+      .filter(x => x.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 5)
+      .map(x => x.entry);
+  }
+
+  function showConfirmModal(file, candidates) {
+    return new Promise(resolve => {
+      els.confirmTitle.textContent = `Kein Hash-Treffer: ${file.name}`;
+      els.confirmDesc.textContent = candidates.length
+        ? 'Für diese Datei wurde kein Hash-Treffer gefunden. Mögliche Treffer nach Name/Größe – bitte auswählen oder ohne Metadaten fortfahren:'
+        : 'Kein Treffer in der Tonie-DB (auch kein Fallback). Ohne Metadaten fortfahren?';
+
+      els.confirmCandidates.innerHTML = candidates.map((c, i) => {
+        const title = c.series && c.episode ? `${c.series} – ${c.episode}` : (c.series || c.episode || c.title || 'Unbekannt');
+        const img = c.image || c.pic || '';
+        return `<div class="candidate-card" data-idx="${i}">
+          <img src="${img}" onerror="this.src=''" alt="Cover">
+          <div class="cand-text">
+            <strong>${title}</strong>
+            <span>${c.genre || ''} ${c.age ? `· ${c.age}+` : ''}</span>
+          </div>
+        </div>`;
+      }).join('');
+
+      els.confirmModal.style.display = 'flex';
+
+      const cleanup = (result) => {
+        els.confirmModal.style.display = 'none';
+        els.confirmCandidates.innerHTML = '';
+        resolve(result);
+      };
+
+      els.confirmCandidates.querySelectorAll('.candidate-card').forEach((card, i) => {
+        card.addEventListener('click', () => cleanup(candidates[i]), { once: true });
+      });
+      els.confirmNoMatchBtn.addEventListener('click', () => cleanup(null), { once: true });
+      els.confirmSkipBtn.addEventListener('click', () => cleanup('skip'), { once: true });
+    });
+  }
+
   function openModal(item) {
     if (!item) return;
     state.modalItem = item;
@@ -783,6 +943,7 @@
       <tr><td>Hash</td><td>${item.hash || '—'}</td></tr>
       <tr><td>Audio-ID</td><td>${meta.audio_id || meta['audio-id'] || '—'}</td></tr>
       <tr><td>Größe</td><td>${meta.size || '—'}</td></tr>
+      <tr><td>Fallback</td><td>${item.isFallback ? '⚠ Fallback (nicht verifiziert)' : '—'}</td></tr>
       <tr><td>Web</td><td>${meta.web ? `<a href="${meta.web}" target="_blank" rel="noreferrer">Tonies-Seite öffnen</a>` : '—'}</td></tr>
     `;
     const tracks = meta['track-desc'] || meta.tracks || [];
@@ -807,13 +968,14 @@
       node.className = 'filecard';
       const placeholder = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72"><rect width="100%" height="100%" rx="18" fill="#d9d4cb"/><path d="M22 48V24l28 12v12z" fill="#8f8a80"/></svg>');
       const coverSrc = item.coverObjectUrl || item.coverUrl || placeholder;
+      const fallbackTag = item.isFallback ? '<span class="tag fallback">⚠ Fallback</span>' : '';
       node.innerHTML = `
         <img class="cover" src="${coverSrc}" alt="Cover Vorschau" data-index="${item.index}">
         <div class="filemeta">
           <h4>${item.displayTitle || item.file.name}</h4>
           <p>${(item.meta?.series || 'Unbekannte Serie')} · ${item.format.toUpperCase()} · ${Math.round(item.file.size / 1024 / 1024 * 10) / 10} MB</p>
           ${item.metaPreview ? `<p>${item.metaPreview}</p>` : ''}
-          <div class="tags">${(item.tags || []).slice(0, 6).map(tag => `<span class="tag">${tag}</span>`).join('')}</div>
+          <div class="tags">${(item.tags || []).slice(0, 6).map(tag => `<span class="tag">${tag}</span>`).join('')}${fallbackTag}</div>
         </div>
         <div class="progresswrap">
           <div class="progressbar"><span style="width:${item.progress || 0}%"></span></div>
@@ -834,7 +996,9 @@
       const res = await fetch(TONIES_DB_URL, { cache: 'force-cache' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const raw = await res.json();
-      state.toniesDb = normalizeDb(raw);
+      const { db, raw: rawList } = normalizeDb(raw);
+      state.toniesDb = db;
+      state.dbRaw = rawList;
       state.dbLoaded = true;
       const count = Object.keys(state.toniesDb).length;
       setDbStatus(`Tonie-Datenbank geladen: ${count} Hashes.`);
@@ -846,31 +1010,25 @@
     }
   }
 
-
   async function ensureFfmpeg() {
-      if (state.ffmpegLoaded) return state.ffmpeg;
-      setEngineStatus('FFmpeg.wasm wird geladen …');
-      log('FFmpeg.wasm wird geladen …');
-      const ffmpeg = new FFmpeg();
-      const baseURL = new URL('assets/ffmpeg/', window.location.href).href;
-      const [coreURL, wasmURL, workerURL] = await Promise.all([
-        toBlobURL(`${baseURL}ffmpeg-core.js`, 'text/javascript'),
-        toBlobURL(`${baseURL}ffmpeg-core.wasm`, 'application/wasm'),
-        toBlobURL(`${baseURL}ffmpeg-core.worker.js`, 'text/javascript')
-      ]);
-      await ffmpeg.load({
-        coreURL,
-        wasmURL,
-        workerURL,
-        classWorkerURL: `${baseURL}worker.js`
-      });
-      state.ffmpeg = ffmpeg;
-      state.ffmpegLoaded = true;
-      setEngineStatus('FFmpeg.wasm geladen und einsatzbereit.');
-      log('FFmpeg.wasm geladen und einsatzbereit.', 'ok');
-      return ffmpeg;
+    if (state.ffmpegLoaded) return state.ffmpeg;
+    setEngineStatus('FFmpeg.wasm wird geladen …');
+    log('FFmpeg.wasm wird geladen …');
+    const ffmpeg = new FFmpeg();
+    const baseURL = new URL('assets/ffmpeg/', window.location.href).href;
+    const [coreURL, wasmURL, workerURL] = await Promise.all([
+      toBlobURL(`${baseURL}ffmpeg-core.js`, 'text/javascript'),
+      toBlobURL(`${baseURL}ffmpeg-core.wasm`, 'application/wasm'),
+      toBlobURL(`${baseURL}ffmpeg-core.worker.js`, 'text/javascript')
+    ]);
+    await ffmpeg.load({ coreURL, wasmURL, workerURL, classWorkerURL: `${baseURL}worker.js` });
+    state.ffmpeg = ffmpeg;
+    state.ffmpegLoaded = true;
+    setEngineStatus('FFmpeg.wasm geladen und einsatzbereit.');
+    log('FFmpeg.wasm geladen und einsatzbereit.', 'ok');
+    return ffmpeg;
   }
-  
+
   function applyDBMetaFallback(item) {
     const meta = item.meta || {};
     if (!item.coverUrl && meta.image) item.coverUrl = meta.image;
@@ -889,7 +1047,27 @@
     const audioSlice = uint8.slice(HEADER_SIZE);
     const hash = await sha1Hex(audioSlice);
     const normalizedHash = hash.toLowerCase();
-    const meta = state.toniesDb[normalizedHash] || {};
+    let meta = state.toniesDb[normalizedHash] || null;
+    let isFallback = false;
+
+    if (!meta) {
+      log(`Kein Hash-Treffer für ${file.name} – suche Fallback …`, 'warn');
+      const candidates = findFallbackCandidates(file);
+      const result = await showConfirmModal(file, candidates);
+      if (result === 'skip') {
+        log(`${file.name} wird übersprungen.`, 'warn');
+        return null;
+      }
+      if (result && result !== null) {
+        meta = result;
+        isFallback = true;
+        log(`Fallback-Metadaten gewählt: ${meta.series || meta.title || 'Unbekannt'}`, 'warn');
+      } else {
+        meta = {};
+        log(`${file.name} wird ohne Metadaten konvertiert.`, 'warn');
+      }
+    }
+
     const series = meta.series || '';
     const episode = meta.episode || '';
     const title = series && episode ? `${series} - ${episode}` : (series || episode || meta.title || file.name.replace(/\.taf$/i, ''));
@@ -915,12 +1093,11 @@
       chapters: [],
       pageMap: {},
       trackList: meta['track-desc'] || meta.tracks || meta.trackList || [],
-      metaPreview: summarizeMeta(meta)
+      metaPreview: summarizeMeta(meta),
+      isFallback
     };
 
-    if (!Object.keys(meta).length) log(`Kein DB-Treffer für ${file.name}`, 'warn');
-    else log(`DB-Treffer: ${title}`, 'ok');
-
+    if (Object.keys(meta).length) log(`DB-Treffer: ${title}${isFallback ? ' (Fallback)' : ''}`, isFallback ? 'warn' : 'ok');
     if (coverUrl) log('Cover-URL gefunden.', 'ok');
     return item;
   }
@@ -936,6 +1113,7 @@
     setStatus('Dateien werden analysiert …');
     for (const file of tafs) {
       const item = await enrichFile(file);
+      if (item === null) continue; // user skipped
       state.files.push(item);
       renderQueue();
     }
@@ -945,6 +1123,7 @@
 
   async function convertOne(item, index, total, zipFolder) {
     const ffmpeg = await ensureFfmpeg();
+    const dateStr = todayString();
     item.status = `Verarbeite ${index + 1}/${total}`;
     item.progress = 5;
     renderQueue();
@@ -963,9 +1142,9 @@
     const outputName = `${outputBase}.${format}`;
     const cueName = `${outputBase}.cue`;
     const commentLimit = Math.max(0, Number(els.commentLimit.value || 0));
-    const comment = `${age ? `Alter: ${age}+\n\n` : ''}${desc || ''}`.slice(0, commentLimit || undefined);
+    const comment = `${age ? `Alter: ${age}+\n\n` : ''}${desc || ''}${item.isFallback ? '\n[Metadaten via Fallback – nicht verifiziert]' : ''}`.slice(0, commentLimit || undefined);
 
-    log(`Konvertierung gestartet: ${title} → ${format.toUpperCase()}`, 'info');
+    log(`Konvertierung gestartet: ${title} → ${format.toUpperCase()}${item.isFallback ? ' ⚠ Fallback' : ''}`, 'info');
 
     if (format === 'ogg') {
       const blob = new Blob([item.audioBuffer], { type: 'audio/ogg' });
@@ -984,6 +1163,7 @@
 
       const args = ['-i', inputName];
       const embedCover = els.embedCover.checked && item.coverUrl && (format === 'mp3' || format === 'm4a');
+      let coverEmbedded = false;
 
       if (embedCover) {
         try {
@@ -992,7 +1172,8 @@
             const coverBlob = await coverRes.blob();
             item.coverObjectUrl = URL.createObjectURL(coverBlob);
             await ffmpeg.writeFile(coverName, await fetchFile(coverBlob));
-            args.push('-i', coverName, '-map', '0:a', '-map', '1:v');
+            args.push('-i', coverName);
+            coverEmbedded = true;
             log('Cover wird eingebettet.', 'info');
           }
         } catch {
@@ -1001,11 +1182,22 @@
       }
 
       if (format === 'mp3') {
-        args.push('-c:a', 'libmp3lame', '-b:a', els.qualitySelect.value, '-id3v2_version', '3');
-        if (embedCover) args.push('-c:v', 'mjpeg', '-disposition:v', 'attached_pic');
+        if (coverEmbedded) {
+          args.push('-map', '0:a', '-map', '1:v');
+          args.push('-c:a', 'libmp3lame', '-b:a', els.qualitySelect.value, '-id3v2_version', '3');
+          args.push('-c:v', 'copy', '-metadata:s:v', 'title=Album cover', '-metadata:s:v', 'comment=Cover (front)');
+          args.push('-disposition:v', 'attached_pic');
+        } else {
+          args.push('-c:a', 'libmp3lame', '-b:a', els.qualitySelect.value, '-id3v2_version', '3');
+        }
       } else if (format === 'm4a') {
-        args.push('-c:a', 'aac', '-b:a', els.qualitySelect.value);
-        if (embedCover) args.push('-c:v', 'mjpeg');
+        if (coverEmbedded) {
+          args.push('-map', '0:a', '-map', '1:v');
+          args.push('-c:a', 'aac', '-b:a', els.qualitySelect.value);
+          args.push('-c:v', 'mjpeg');
+        } else {
+          args.push('-c:a', 'aac', '-b:a', els.qualitySelect.value);
+        }
       }
 
       args.push(
@@ -1013,6 +1205,7 @@
         '-metadata', `artist=${artist}`,
         '-metadata', `genre=${genre}`,
         '-metadata', `comment=${comment}`,
+        '-metadata', `date=${new Date().getFullYear()}`,
         outputTmp
       );
 
@@ -1042,13 +1235,25 @@
       log(`Export fertig: ${outputName}`, 'ok');
     }
 
+    // Cover separat speichern
     if (els.createCovers.checked && item.coverUrl) {
-      zipFolder.file(`${outputBase}.jpg`, item.coverUrl);
+      try {
+        const coverRes = await fetch(item.coverUrl, { mode: 'cors' });
+        if (coverRes.ok) {
+          const coverBlob = await coverRes.blob();
+          zipFolder.file(`${outputBase}.jpg`, coverBlob);
+        }
+      } catch {
+        zipFolder.file(`${outputBase}.jpg`, item.coverUrl);
+      }
     }
-    if (item.chapters.length > 1) {
-      zipFolder.file(cueName, buildCue(title, outputName, item.chapters, item.pageMap, meta['track-desc'] || meta.tracks || []));
-      log(`Kapitel-CUE erzeugt: ${cueName}`, 'info');
-    }
+
+    // CUE immer erzeugen (mindestens 1 Eintrag)
+    const chapters = item.chapters.length ? item.chapters : [0];
+    const trackList = meta['track-desc'] || meta.tracks || item.trackList || [];
+    const cueContent = buildCue(title, outputName, chapters, item.pageMap, trackList, dateStr);
+    zipFolder.file(cueName, cueContent);
+    log(`CUE erzeugt: ${cueName}`, 'info');
 
     const entry = buildKlangkisteEntry(
       item.hash,
@@ -1105,7 +1310,7 @@
         const url = URL.createObjectURL(zipBlob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'klangkiste-go-export.zip';
+        a.download = `klangkiste-go-export_${todayString()}.zip`;
         a.click();
         setTimeout(() => URL.revokeObjectURL(url), 1500);
         setStatus('Fertig. Download wurde vorbereitet.');
@@ -1122,9 +1327,7 @@
       const outputBase = cleanFilename(title);
       const outputName = `${outputBase}.${els.formatSelect.value}`;
       return buildKlangkisteEntry(
-        item.hash,
-        title,
-        outputName,
+        item.hash, title, outputName,
         item.coverUrl ? `${outputBase}.jpg` : null,
         meta.description || '',
         Number.parseInt(meta.age || 0, 10) || 0,
@@ -1138,7 +1341,7 @@
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'klangkiste.json';
+    a.download = `klangkiste_${todayString()}.json`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1500);
     log('Nur JSON wurde heruntergeladen.', 'info');
@@ -1172,7 +1375,8 @@
       chapters: [0],
       pageMap: {},
       trackList: ['Intro', 'Kapitel 1'],
-      metaPreview: 'Demo-Serie | Folge 1 | Beispielbeschreibung für Anzeige und Tags.'
+      metaPreview: 'Demo-Serie | Folge 1 | Beispielbeschreibung für Anzeige und Tags.',
+      isFallback: false
     }];
     renderQueue();
     updateMetrics();
@@ -1223,12 +1427,16 @@
     els.clearBtn.addEventListener('click', clearQueue);
     els.closeModalBtn.addEventListener('click', closeModal);
     els.detailModal.addEventListener('click', e => { if (e.target === els.detailModal) closeModal(); });
+    // JSON button visibility follows checkbox
+    els.createJson.addEventListener('change', updateJsonBtnVisibility);
   }
 
   async function init() {
     initTheme();
     initDnD();
     bindEvents();
+    initFooterMeta();
+    updateJsonBtnVisibility();
     renderLogs();
     renderQueue();
     updateMetrics();
