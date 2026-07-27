@@ -1,0 +1,72 @@
+name: Cover Cloud
+
+on:
+  workflow_dispatch:
+    inputs:
+      cover_url:
+        description: "Cover image URL"
+        required: true
+        type: string
+      output_name:
+        description: "Output file name without extension"
+        required: true
+        type: string
+      output_format:
+        description: "jpg or png"
+        required: true
+        default: "jpg"
+        type: choice
+        options:
+          - jpg
+          - png
+      quality:
+        description: "JPEG quality (0.1 - 1.0)"
+        required: false
+        default: "0.92"
+        type: string
+
+jobs:
+  fetch-cover:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install tools
+        run: sudo apt-get update && sudo apt-get install -y python3 python3-pil
+
+      - name: Download and convert
+        env:
+          COVER_URL: ${{ inputs.cover_url }}
+          OUTPUT_NAME: ${{ inputs.output_name }}
+          OUTPUT_FORMAT: ${{ inputs.output_format }}
+          QUALITY: ${{ inputs.quality }}
+        run: |
+          python3 - <<'PY'
+          import os, sys, requests
+          from io import BytesIO
+          from PIL import Image
+
+          url = os.environ["COVER_URL"]
+          out = os.environ["OUTPUT_NAME"]
+          fmt = os.environ["OUTPUT_FORMAT"].lower().strip()
+          q = float(os.environ.get("QUALITY", "0.92"))
+
+          r = requests.get(url, timeout=30, headers={"User-Agent": "Mozilla/5.0"})
+          r.raise_for_status()
+          img = Image.open(BytesIO(r.content)).convert("RGB")
+
+          os.makedirs("out", exist_ok=True)
+          if fmt == "png":
+              path = f"out/{out}.png"
+              img.save(path, format="PNG")
+          else:
+              path = f"out/{out}.jpg"
+              img.save(path, format="JPEG", quality=max(1, min(95, int(q * 100))), optimize=True)
+
+          print(path)
+          PY
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cover-output
+          path: out/*
+          if-no-files-found: error
