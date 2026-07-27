@@ -1400,17 +1400,6 @@
     els.createJson.addEventListener('change', updateJsonBtnVisibility);
   }
 
-  function initTheme() {
-    const saved = localStorage.getItem('kg-theme');
-    if (saved) document.documentElement.setAttribute('data-theme', saved);
-
-    els.themeBtn.addEventListener('click', () => {
-      const current = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-      document.documentElement.setAttribute('data-theme', current);
-      localStorage.setItem('kg-theme', current);
-    });
-  }
-
   async function init() {
     initTheme();
     initDnD();
