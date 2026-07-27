@@ -26,9 +26,6 @@
       --blue:#2563eb;
       --shadow:0 16px 50px rgba(15,23,42,.10);
       --shadow2:0 8px 22px rgba(15,23,42,.08);
-      --r1:14px;
-      --r2:18px;
-      --r3:24px;
       --r4:32px;
       --font:'Instrument Sans',system-ui,sans-serif;
       --font2:'Manrope',system-ui,sans-serif;
@@ -613,7 +610,7 @@
   import { fetchFile, toBlobURL } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js';
   import JSZip from 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm';
 
-  const APP_VERSION = '1.1.0';
+  const APP_VERSION = '1.2.0';
   const APP_DATE = new Date().toLocaleDateString('de-DE', { day:'2-digit', month:'2-digit', year:'numeric' });
   const HEADER_SIZE = 4096;
   const OPUS_SAMPLE_RATE = 48000;
@@ -630,7 +627,6 @@
     generatedEntries: [],
     logs: [],
     abortRequested: false,
-    pendingConfirm: null,
     modalItem: null
   };
 
@@ -647,7 +643,6 @@
     embedCover: document.getElementById('embedCover'),
     createJson: document.getElementById('createJson'),
     createCovers: document.getElementById('createCovers'),
-    zipAll: document.getElementById('zipAll'),
     convertBtn: document.getElementById('convertBtn'),
     stopBtn: document.getElementById('stopBtn'),
     downloadJsonBtn: document.getElementById('downloadJsonBtn'),
@@ -782,16 +777,17 @@
   }
 
   function buildCue(title, outputName, chapters, pageMap, trackList=[], dateStr='') {
-    const ext = outputName.split('.').pop().toLowerCase();
-    const fileType = ext === 'mp3' ? 'MP3' : 'WAVE';
     let out = `REM CREATED BY KLANGKISTE GO\n`;
     if (dateStr) out += `REM DATE ${dateStr}\n`;
-    out += `TITLE "${String(title).replace(/"/g, "'")}"\nFILE "${outputName}" ${fileType}\n`;
+    out += `TITLE "${String(title).replace(/"/g, "'")}"\n`;
+    out += `FILE "${outputName}" MP3\n`;
     chapters.forEach((ch, idx) => {
       let ts = '00:00:00';
-      if (ch > 0 && (ch - 1) in pageMap) ts = granuleToCue(pageMap[ch - 1]);
+      if (ch > 0 && pageMap && pageMap[ch - 1] != null) ts = granuleToCue(pageMap[ch - 1]);
       const tName = trackList[idx] || `Kapitel ${idx + 1}`;
-      out += `  TRACK ${String(idx + 1).padStart(2,'0')} AUDIO\n    TITLE "${String(tName).replace(/"/g, "'")}"\n    INDEX 01 ${ts}\n`;
+      out += `  TRACK ${String(idx + 1).padStart(2,'0')} AUDIO\n`;
+      out += `    TITLE "${String(tName).replace(/"/g, "'")}"\n`;
+      out += `    INDEX 01 ${ts}\n`;
     });
     return out;
   }
@@ -823,9 +819,7 @@
       const episode = (entry.episode || '').toLowerCase();
       const combined = `${series} ${episode}`;
       const nameWords = baseName.split(/[\s_\-]+/).filter(Boolean);
-      for (const w of nameWords) {
-        if (w.length > 2 && combined.includes(w)) score += 3;
-      }
+      for (const w of nameWords) if (w.length > 2 && combined.includes(w)) score += 3;
       if (entry.size && sizeBytes > 0) {
         const entrySize = Number(entry.size);
         if (!isNaN(entrySize) && entrySize > 0) {
@@ -877,22 +871,23 @@
 
   function openModal(item) {
     if (!item) return;
-    state.modalItem = item;
     const meta = item.meta || {};
     els.modalTitle.textContent = item.displayTitle || item.file.name;
     els.modalSubtitle.textContent = meta.web || meta.series || '';
-    els.modalCover.src = item.coverUrl || item.coverObjectUrl || '';
+    els.modalCover.src = item.coverObjectUrl || item.coverUrl || '';
     els.modalCover.alt = item.displayTitle || 'Cover';
+    const audioId = meta.audio_id || meta['audio-id'] || meta.audioId || '—';
+    const sizeVal = meta.size || item.file?.size || meta.filesize || meta.fileSize || '—';
     els.modalMeta.innerHTML = `
       <tr><td>Serie</td><td>${meta.series || '—'}</td></tr>
       <tr><td>Episode</td><td>${meta.episode || '—'}</td></tr>
+      <tr><td>Audio-ID</td><td>${audioId}</td></tr>
+      <tr><td>Größe</td><td>${sizeVal}</td></tr>
       <tr><td>Dauer</td><td>${meta.runtime ? `${meta.runtime} min` : '—'}</td></tr>
       <tr><td>Alter</td><td>${meta.age || '—'}</td></tr>
       <tr><td>Sprache</td><td>${meta.language || '—'}</td></tr>
       <tr><td>Kategorie</td><td>${meta.category || '—'}</td></tr>
       <tr><td>Hash</td><td>${item.hash || '—'}</td></tr>
-      <tr><td>Audio-ID</td><td>${meta.audio_id || meta['audio-id'] || '—'}</td></tr>
-      <tr><td>Größe</td><td>${meta.size || '—'}</td></tr>
       <tr><td>Fallback</td><td>${item.isFallback ? '⚠ Fallback (nicht verifiziert)' : '—'}</td></tr>
       <tr><td>Web</td><td>${meta.web ? `<a href="${meta.web}" target="_blank" rel="noreferrer">Tonies-Seite öffnen</a>` : '—'}</td></tr>
     `;
@@ -901,7 +896,7 @@
     els.detailModal.style.display = 'flex';
   }
 
-  function closeModal() { els.detailModal.style.display = 'none'; state.modalItem = null; }
+  function closeModal() { els.detailModal.style.display = 'none'; }
 
   function renderQueue() {
     els.queue.innerHTML = '';
@@ -976,52 +971,65 @@
     return ffmpeg;
   }
 
-  async function getChaptersRobustFromTaf(uint8) {
-    const best = [];
-    for (let i = 0; i < Math.max(0, HEADER_SIZE - 2); i++) {
-      if (uint8[i] !== 0x22) continue;
+  function readVarintFromBytes(bytes, offset) {
+    let value = 0;
+    let shift = 0;
+    let curr = offset;
+    while (true) {
+      if (curr >= bytes.length) throw new Error('EOF');
+      const byte = bytes[curr++];
+      value |= (byte & 0x7f) << shift;
+      if (!(byte & 0x80)) break;
+      shift += 7;
+    }
+    return { value, next: curr };
+  }
+
+  function getChaptersRobustFromTaf(bytes) {
+    let bestChapters = [];
+    const header = bytes.slice(0, HEADER_SIZE);
+    for (let i = 0; i < header.length - 2; i++) {
+      if (header[i] !== 0x22) continue;
       try {
-        const length = uint8[i + 1];
+        const length = header[i + 1];
         const start = i + 2;
         const end = start + length;
-        if (end > uint8.length) continue;
+        if (end > header.length) continue;
         const temp = [];
         let curr = start;
         while (curr < end) {
-          let value = 0, shift = 0;
-          while (true) {
-            if (curr >= uint8.length) throw new Error('EOF');
-            const byte = uint8[curr++];
-            value |= (byte & 0x7f) << shift;
-            if (!(byte & 0x80)) break;
-            shift += 7;
-          }
+          const { value, next } = readVarintFromBytes(header, curr);
           temp.push(value);
+          curr = next;
         }
-        if (temp.length > best.length && temp.every((v, idx, arr) => idx === 0 || arr[idx - 1] <= v)) {
-          best.splice(0, best.length, ...temp);
-        }
+        const monotonic = temp.length > 0 && temp.every((v, idx) => idx === 0 || temp[idx - 1] <= v);
+        if (temp.length > bestChapters.length && monotonic) bestChapters = temp;
       } catch {}
     }
-    return [...new Set([0, ...best])].sort((a, b) => a - b);
+    return [...new Set([0, ...bestChapters])].sort((a, b) => a - b);
   }
 
-  function scanOggTimestampsFromTaf(uint8) {
+  function scanOggTimestampsFromTaf(bytes) {
     const pageMap = {};
     let pos = HEADER_SIZE;
-    while (pos < uint8.length) {
-      const sig = String.fromCharCode(uint8[pos], uint8[pos + 1], uint8[pos + 2], uint8[pos + 3]);
-      if (sig !== 'OggS') {
+    while (pos < bytes.length) {
+      if (
+        bytes[pos] !== 0x4f ||
+        bytes[pos + 1] !== 0x67 ||
+        bytes[pos + 2] !== 0x67 ||
+        bytes[pos + 3] !== 0x53
+      ) {
         pos += 1;
         continue;
       }
-      if (pos + 27 > uint8.length) break;
-      const view = new DataView(uint8.buffer, uint8.byteOffset + pos, uint8.byteLength - pos);
-      const granule = view.getBigUint64(6, true);
+      if (pos + 27 > bytes.length) break;
+      const view = new DataView(bytes.buffer, bytes.byteOffset + pos, bytes.byteLength - pos);
+      const granule = Number(view.getBigUint64(6, true));
       const pageSegments = view.getUint8(26);
+      if (pos + 27 + pageSegments > bytes.length) break;
       let segSum = 0;
       for (let i = 0; i < pageSegments; i++) segSum += view.getUint8(27 + i);
-      pageMap[Number(granule)] = Number(granule);
+      pageMap[granule] = granule;
       pos += 27 + pageSegments + segSum;
     }
     return pageMap;
@@ -1058,7 +1066,22 @@
     const age = Number.parseInt(meta.age || 0, 10) || 0;
     const genre = meta.genre || 'Hörspiel';
     const tags = detectTags(title, desc, genre);
+
     const coverUrl = meta.image || meta.pic || null;
+    let coverBlob = null;
+    let coverObjectUrl = null;
+
+    if (coverUrl) {
+      try {
+        const res = await fetch(coverUrl, { mode: 'cors' });
+        if (res.ok) {
+          coverBlob = await res.blob();
+          coverObjectUrl = URL.createObjectURL(coverBlob);
+        }
+      } catch {
+        log('Cover konnte nicht per CORS geladen werden, wird nur angezeigt.', 'warn');
+      }
+    }
 
     const item = {
       file,
@@ -1072,8 +1095,9 @@
       format: els.formatSelect.value,
       tags,
       coverUrl,
-      coverObjectUrl: null,
-      chapters: await getChaptersRobustFromTaf(uint8),
+      coverBlob,
+      coverObjectUrl,
+      chapters: getChaptersRobustFromTaf(uint8),
       pageMap: scanOggTimestampsFromTaf(uint8),
       trackList: meta['track-desc'] || meta.tracks || meta.trackList || [],
       metaPreview: summarizeMeta(meta),
@@ -1145,23 +1169,14 @@
       renderQueue();
 
       const args = ['-i', inputName];
-      const embedCover = els.embedCover.checked && item.coverUrl && (format === 'mp3' || format === 'm4a');
+      const embedCover = els.embedCover.checked && item.coverBlob && (format === 'mp3' || format === 'm4a');
       let coverEmbedded = false;
 
       if (embedCover) {
-        try {
-          const coverRes = await fetch(item.coverUrl, { mode: 'cors' });
-          if (coverRes.ok) {
-            const coverBlob = await coverRes.blob();
-            item.coverObjectUrl = URL.createObjectURL(coverBlob);
-            await ffmpeg.writeFile(coverName, await fetchFile(coverBlob));
-            args.push('-i', coverName);
-            coverEmbedded = true;
-            log('Cover wird eingebettet.', 'info');
-          }
-        } catch {
-          log('Cover konnte nicht per CORS geladen werden, wird nur angezeigt.', 'warn');
-        }
+        await ffmpeg.writeFile(coverName, await fetchFile(item.coverBlob));
+        args.push('-i', coverName);
+        coverEmbedded = true;
+        log('Cover wird eingebettet.', 'info');
       }
 
       if (format === 'mp3') {
@@ -1201,8 +1216,6 @@
 
       await ffmpeg.exec(args);
 
-      if (state.abortRequested) throw new Error('aborted');
-
       const outData = await ffmpeg.readFile(outputTmp);
       zipFolder.file(outputName, new Blob([outData.buffer], { type: format === 'mp3' ? 'audio/mpeg' : 'audio/mp4' }));
 
@@ -1215,26 +1228,21 @@
       log(`Export fertig: ${outputName}`, 'ok');
     }
 
-    if (els.createCovers.checked && item.coverUrl) {
-      try {
-        const coverRes = await fetch(item.coverUrl, { mode: 'cors' });
-        if (coverRes.ok) {
-          const coverBlob = await coverRes.blob();
-          zipFolder.file(`${outputBase}.jpg`, coverBlob);
-        }
-      } catch {}
+    if (els.createCovers.checked && item.coverBlob) {
+      zipFolder.file(`${outputBase}.jpg`, item.coverBlob);
     }
 
     const chapters = item.chapters.length ? item.chapters : [0];
     const trackList = meta['track-desc'] || meta.tracks || item.trackList || [];
-    zipFolder.file(cueName, buildCue(title, outputName, chapters, item.pageMap, trackList, dateStr));
+    const cueContent = buildCue(title, outputName, chapters, item.pageMap, trackList, dateStr);
+    zipFolder.file(cueName, cueContent);
     log(`CUE erzeugt: ${cueName}`, 'info');
 
     const entry = buildKlangkisteEntry(
       item.hash,
       title,
       outputName,
-      item.coverUrl ? `${outputBase}.jpg` : null,
+      item.coverBlob ? `${outputBase}.jpg` : null,
       desc,
       age,
       genre,
@@ -1302,8 +1310,10 @@
       const outputBase = cleanFilename(title);
       const outputName = `${outputBase}.${els.formatSelect.value}`;
       return buildKlangkisteEntry(
-        item.hash, title, outputName,
-        item.coverUrl ? `${outputBase}.jpg` : null,
+        item.hash,
+        title,
+        outputName,
+        item.coverBlob ? `${outputBase}.jpg` : null,
         meta.description || '',
         Number.parseInt(meta.age || 0, 10) || 0,
         meta.genre || 'Hörspiel',
@@ -1353,46 +1363,4 @@
     };
     ['dragenter', 'dragover'].forEach(type => els.dropzone.addEventListener(type, enter));
     ['dragleave', 'dragend'].forEach(type => els.dropzone.addEventListener(type, leave));
-    els.dropzone.addEventListener('drop', drop);
-  }
-
-  function bindEvents() {
-    els.fileInput.addEventListener('change', async e => {
-      await addFiles([...e.target.files]);
-      e.target.value = '';
-    });
-    els.dropzone.addEventListener('click', () => els.fileInput.click());
-    els.dropzone.addEventListener('keydown', e => {
-      if (e.key === 'Enter' || e.key === ' ') els.fileInput.click();
-    });
-    els.convertBtn.addEventListener('click', startConversion);
-    els.stopBtn.addEventListener('click', () => {
-      state.abortRequested = true;
-      setStatus('Abbruch angefordert …');
-      log('Abbruch angefordert.', 'warn');
-    });
-    els.downloadJsonBtn.addEventListener('click', downloadJsonOnly);
-    els.clearBtn.addEventListener('click', clearQueue);
-    els.closeModalBtn.addEventListener('click', closeModal);
-    els.detailModal.addEventListener('click', e => { if (e.target === els.detailModal) closeModal(); });
-    els.createJson.addEventListener('change', updateJsonBtnVisibility);
-  }
-
-  async function init() {
-    initTheme();
-    initDnD();
-    bindEvents();
-    initFooterMeta();
-    updateJsonBtnVisibility();
-    renderLogs();
-    renderQueue();
-    updateMetrics();
-    setStatus('Bereit. TAF-Dateien hinzufügen.');
-    log('App gestartet.', 'info');
-    await fetchToniesDb();
-  }
-
-  init();
-</script>
-</body>
-</html>
+    els
