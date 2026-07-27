@@ -2,567 +2,240 @@
 <html lang="de" data-theme="light">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Klangkiste Go</title>
-  <meta name="description" content="TAF-Dateien direkt im Browser in MP3, M4A oder OGG konvertieren – mit Tonie-DB, Cover-Vorschau, Detailansicht und ZIP-Export." />
-  <meta name="theme-color" content="#0f766e" />
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Klangkiste Go · TAF-Konverter</title>
   <style>
-    :root{
-      --bg:#f3f6f9;
-      --bg2:#e9eef5;
-      --card:rgba(255,255,255,.84);
-      --card2:rgba(255,255,255,.95);
-      --stroke:rgba(15,23,42,.08);
-      --text:#101827;
-      --muted:#637083;
-      --brand:#0f766e;
-      --brand2:#115e59;
-      --ok:#16a34a;
-      --warn:#d97706;
-      --bad:#dc2626;
-      --blue:#2563eb;
-      --shadow:0 16px 50px rgba(15,23,42,.10);
-      --shadow2:0 8px 22px rgba(15,23,42,.08);
-      --r1:14px;
-      --r2:18px;
-      --r3:24px;
-      --r4:32px;
-      --font:'Instrument Sans',system-ui,sans-serif;
-      --font2:'Manrope',system-ui,sans-serif;
+    :root {
+      --brand:#7c5cbf; --brand2:#a07be0;
+      --bg:#f4f2ef; --bg2:#eceae6; --card:#fff; --card2:#f8f6f3;
+      --text:#1a1814; --muted:#7a7368; --stroke:#dedad4;
+      --ok:#2e8b57; --warn:#c07000; --bad:#c0392b; --info:#2566c8;
+      --shadow:0 2px 18px rgba(0,0,0,.09);
+      --font1:'Segoe UI',system-ui,sans-serif; --font2:'Georgia',serif;
     }
-    [data-theme="dark"]{
-      --bg:#17191e;
-      --bg2:#12141a;
-      --card:rgba(24,27,34,.88);
-      --card2:rgba(30,34,42,.95);
-      --stroke:rgba(255,255,255,.08);
-      --text:#eef2f7;
-      --muted:#a8b1bf;
-      --brand:#3f9d95;
-      --brand2:#2f827b;
-      --shadow:0 16px 50px rgba(0,0,0,.28);
-      --shadow2:0 8px 22px rgba(0,0,0,.22);
+    [data-theme="dark"] {
+      --bg:#181613; --bg2:#201e1b; --card:#242118; --card2:#2c2926;
+      --text:#f0ece4; --muted:#9a9488; --stroke:#38342e;
+      --shadow:0 2px 18px rgba(0,0,0,.4);
     }
-    *{box-sizing:border-box}
-    html{scroll-behavior:smooth}
-    body{
-      margin:0;
-      min-height:100dvh;
-      font-family:var(--font);
-      color:var(--text);
-      background:
-        radial-gradient(circle at top, rgba(15,118,110,.12), transparent 28%),
-        linear-gradient(180deg, #ffffff 0%, var(--bg) 28%, var(--bg2) 100%);
-    }
-    a{color:inherit}
-    .shell{width:min(1220px, calc(100% - 18px)); margin:0 auto; padding:12px 0 18px;}
-    .topbar{
-      position:sticky; top:0; z-index:40;
-      backdrop-filter: blur(18px);
-      background: color-mix(in srgb, var(--bg) 72%, transparent);
-      border-bottom:1px solid var(--stroke);
-      margin:0 -9px 16px;
-      padding:10px 9px 12px;
-    }
-    .topbar-inner{display:flex; gap:12px; align-items:center; justify-content:space-between;}
-    .brandbox{display:flex; gap:12px; align-items:center; min-width:0;}
-    .logo{
-      width:48px; height:48px; flex:0 0 auto;
-      border-radius:16px; display:grid; place-items:center;
-      color:#fff;
-      background:linear-gradient(145deg, var(--brand), color-mix(in srgb, var(--brand) 55%, white));
-      box-shadow:var(--shadow2);
-    }
-    .brandtext{min-width:0}
-    .brandtext h1{
-      margin:0; font-size:clamp(1.1rem, 3vw, 1.6rem); line-height:1.05;
-      font-family:var(--font2); letter-spacing:-.02em;
-    }
-    .brandtext p{margin:.25rem 0 0; color:var(--muted); font-size:.92rem;}
-    .topactions{display:flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:flex-end;}
-    .iconbtn, .btn, .filepick, select, input[type="text"], input[type="number"]{
-      font:inherit;
-      border:1px solid var(--stroke);
-      background:var(--card);
-      color:var(--text);
-      border-radius:18px;
-      box-shadow:var(--shadow2);
-    }
-    .iconbtn{
-      width:46px; height:46px;
-      display:grid; place-items:center;
-      cursor:pointer; padding:0;
-    }
-    .hero{
-      display:grid; gap:14px;
-      grid-template-columns: 1.35fr .85fr;
-      margin:0 0 14px;
-    }
-    .card{
-      background:var(--card);
-      border:1px solid var(--stroke);
-      box-shadow:var(--shadow);
-      border-radius:var(--r4);
-      backdrop-filter: blur(20px) saturate(150%);
-    }
-    .hero-main{padding:18px; overflow:hidden; position:relative;}
-    .badge{
-      display:inline-flex; align-items:center; gap:8px;
-      border-radius:999px; padding:7px 12px;
-      background:color-mix(in srgb, var(--brand) 12%, transparent);
-      color:var(--brand);
-      font-weight:700; letter-spacing:.03em;
-      font-size:.78rem; text-transform:uppercase;
-    }
-    .hero-main h2{
-      margin:14px 0 10px;
-      font-family:var(--font2);
-      font-size:clamp(1.8rem, 4.7vw, 3.4rem);
-      line-height:1.02;
-      letter-spacing:-.04em;
-    }
-    .hero-main p{margin:0; color:var(--muted); max-width:64ch; font-size:1rem;}
-    .hero-pills{
-      display:grid;
-      grid-template-columns:repeat(2, minmax(0,1fr));
-      gap:10px;
-      margin-top:16px;
-    }
-    .pill{
-      padding:12px 14px;
-      border-radius:18px;
-      background:var(--card2);
-      border:1px solid var(--stroke);
-      font-weight:700;
-      box-shadow:var(--shadow2);
-    }
-    .hero-side{padding:18px; display:grid; gap:12px; align-content:start;}
-    .metric{
-      background:var(--card2);
-      border:1px solid var(--stroke);
-      border-radius:20px;
-      padding:14px;
-      box-shadow:var(--shadow2);
-    }
-    .metric strong{display:block; font-family:var(--font2); font-size:1.15rem; margin-bottom:4px;}
-    .metric span{color:var(--muted); font-size:.92rem}
-    .grid{display:grid; grid-template-columns: 1fr 1fr; gap:14px; align-items:start;}
-    .panel{padding:16px;}
-    .panel h3{margin:0 0 12px; font-size:1.06rem; font-family:var(--font2); letter-spacing:-.02em;}
-    .dropzone{
-      border:1.5px dashed color-mix(in srgb, var(--brand) 40%, var(--stroke));
-      border-radius:26px;
-      padding:16px;
-      background:linear-gradient(180deg, color-mix(in srgb, var(--brand) 8%, var(--card2)), var(--card));
-      display:grid;
-      gap:10px;
-      text-align:center;
-    }
-    .dropzone.drag{transform:scale(1.008); border-color:var(--brand);}
-    .dropzone strong{font-size:1.05rem}
-    .dropzone p{margin:0;color:var(--muted)}
-    .btn{
-      min-height:54px;
-      padding:12px 16px;
-      cursor:pointer;
-      font-weight:800;
-      letter-spacing:.01em;
-    }
-    .btn-primary{
-      background:linear-gradient(180deg, color-mix(in srgb, var(--brand) 96%, white), var(--brand));
-      color:#fff;
-      border:none;
-    }
-    .btn-secondary{background:var(--card2);}
-    .btn-danger{
-      background:color-mix(in srgb, var(--bad) 10%, var(--card2));
-      color:var(--bad);
-    }
-    .filepick{
-      min-height:54px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      cursor:pointer;
-      font-weight:800;
-      padding:12px 16px;
-      user-select:none;
-    }
-    .sr-only{
-      position:absolute !important;
-      width:1px;height:1px;
-      padding:0;margin:-1px;
-      overflow:hidden;clip:rect(0,0,0,0);
-      white-space:nowrap;border:0;
-    }
-    .settings{
-      display:grid;
-      grid-template-columns:repeat(2, minmax(0,1fr));
-      gap:10px;
-      margin-top:14px;
-    }
-    .field{display:grid; gap:6px;}
-    .field label{font-size:.88rem; color:var(--muted); font-weight:700;}
-    select,input[type="text"],input[type="number"]{
-      min-height:48px;
-      padding:12px 14px;
-      width:100%;
-      box-shadow:none;
-      background:var(--card2);
-    }
-    .checks{display:grid; gap:8px; margin-top:12px;}
-    .check{
-      display:flex;
-      gap:10px;
-      align-items:flex-start;
-      padding:12px 14px;
-      border-radius:18px;
-      background:var(--card2);
-      border:1px solid var(--stroke);
-      box-shadow:var(--shadow2);
-    }
-    .check input{margin-top:4px; transform:scale(1.1)}
-    .actions{
-      display:grid;
-      gap:10px;
-      grid-template-columns:1fr 1fr 1fr;
-      margin-top:12px;
-    }
-    .statusbox{display:grid; gap:8px; margin-top:14px;}
-    .statusline{
-      padding:12px 14px;
-      background:var(--card2);
-      border:1px solid var(--stroke);
-      border-radius:18px;
-      box-shadow:var(--shadow2);
-      color:var(--muted);
-      font-size:.94rem;
-    }
-    .statusline strong{color:var(--text)}
-    .preview{display:grid; gap:10px;}
-    .queue{
-      display:grid;
-      gap:10px;
-      max-height:58vh;
-      overflow:auto;
-      padding-right:2px;
-    }
-    .filecard{
-      display:grid;
-      grid-template-columns:72px 1fr;
-      gap:12px;
-      padding:12px;
-      border-radius:22px;
-      background:var(--card2);
-      border:1px solid var(--stroke);
-      box-shadow:var(--shadow2);
-      cursor:pointer;
-    }
-    .cover{
-      width:72px;
-      height:72px;
-      border-radius:18px;
-      object-fit:cover;
-      background:var(--bg2);
-      border:1px solid var(--stroke);
-      display:block;
-    }
+    *,*::before,*::after{box-sizing:border-box; margin:0; padding:0;}
+    body{font-family:var(--font1); background:var(--bg); color:var(--text); min-height:100dvh; display:flex; flex-direction:column;}
+    a{color:var(--brand);}
+    h1,h2,h3{font-family:var(--font2);}
+    /* TOPBAR */
+    .topbar{background:var(--card); border-bottom:1px solid var(--stroke); position:sticky; top:0; z-index:100; box-shadow:var(--shadow);}
+    .topbar-inner{max-width:900px; margin:0 auto; padding:10px 16px; display:flex; align-items:center; justify-content:space-between; gap:12px;}
+    .brandbox{display:flex; align-items:center; gap:12px;}
+    .logo{color:var(--brand); flex-shrink:0;}
+    .brandtext h1{font-size:1.18rem; line-height:1.1;}
+    .brandtext p{font-size:.82rem; color:var(--muted); margin-top:2px;}
+    .topactions{display:flex; align-items:center; gap:8px;}
+    .version-badge{font-size:.72rem; background:var(--brand); color:#fff; border-radius:999px; padding:2px 9px; font-weight:700; letter-spacing:.02em;}
+    .iconbtn{background:var(--bg2); border:1px solid var(--stroke); border-radius:50%; width:36px; height:36px; cursor:pointer; font-size:1.1rem; display:flex; align-items:center; justify-content:center; color:var(--text);}
+    .gh-link{font-size:.82rem; color:var(--muted); text-decoration:none; white-space:nowrap;}
+    .gh-link:hover{color:var(--brand);}
+    /* MAIN */
+    main{max-width:900px; margin:0 auto; padding:18px 14px 40px; flex:1; width:100%;}
+    /* HERO */
+    .hero{background:linear-gradient(135deg,var(--brand) 0%,var(--brand2) 100%); color:#fff; border-radius:24px; padding:22px 24px; margin-bottom:20px;}
+    .hero h2{font-size:1.4rem; margin-bottom:6px;}
+    .hero p{opacity:.88; font-size:.95rem;}
+    .feature-chips{display:flex; flex-wrap:wrap; gap:8px; margin-top:14px;}
+    .chip{background:rgba(255,255,255,.18); border-radius:999px; padding:4px 13px; font-size:.82rem; border:1px solid rgba(255,255,255,.3);}
+    /* CARDS */
+    .card{background:var(--card); border:1px solid var(--stroke); border-radius:22px; padding:18px; margin-bottom:16px; box-shadow:var(--shadow);}
+    .card-title{font-size:1rem; font-weight:700; color:var(--brand); margin-bottom:12px;}
+    /* DROPZONE */
+    .dropzone{border:2px dashed var(--brand); border-radius:18px; padding:28px 18px; text-align:center; cursor:pointer; background:var(--card2); transition:background .15s;}
+    .dropzone:hover,.dropzone.drag-over{background:color-mix(in srgb,var(--brand) 8%,var(--card2));}
+    .dropzone p{color:var(--muted); font-size:.95rem; pointer-events:none;}
+    .dropzone strong{color:var(--brand);}
+    /* SETTINGS */
+    .settings-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:12px;}
+    .field{display:flex; flex-direction:column; gap:4px;}
+    label.field-label{font-size:.82rem; color:var(--muted); font-weight:700;}
+    select,input[type=text],input[type=number]{background:var(--bg2); border:1px solid var(--stroke); border-radius:12px; padding:8px 12px; font-size:.95rem; color:var(--text); width:100%;}
+    .checks{display:flex; flex-direction:column; gap:8px; margin-top:4px;}
+    .check{display:flex; align-items:flex-start; gap:10px; cursor:pointer;}
+    .check input[type=checkbox]{width:18px; height:18px; margin-top:2px; flex-shrink:0; accent-color:var(--brand);}
+    /* BUTTONS */
+    .btn-row{display:flex; flex-wrap:wrap; gap:10px; margin-top:16px;}
+    .btn{border:none; border-radius:14px; padding:10px 22px; font-size:.95rem; font-weight:700; cursor:pointer; transition:opacity .15s; font-family:inherit;}
+    .btn:disabled{opacity:.45; cursor:not-allowed;}
+    .btn-primary{background:var(--brand); color:#fff;}
+    .btn-secondary{background:var(--bg2); color:var(--text); border:1px solid var(--stroke);}
+    .btn-danger{background:color-mix(in srgb,var(--bad) 10%,var(--card2)); color:var(--bad);}
+    /* STATUS */
+    .statusbox{background:var(--card2); border-radius:16px; padding:12px 14px; margin-top:12px; font-size:.9rem; display:flex; flex-direction:column; gap:5px;}
+    .statusline{color:var(--muted);}
+    .statusline strong{color:var(--text);}
+    /* METRICS */
+    .metrics{display:flex; gap:12px; flex-wrap:wrap; margin-top:10px;}
+    .metric{background:var(--bg2); border-radius:14px; padding:8px 14px; font-size:.85rem; color:var(--muted);}
+    .metric strong{color:var(--brand); display:block; font-size:1.3rem;}
+    /* QUEUE */
+    .queue-list{display:flex; flex-direction:column; gap:10px;}
+    .filecard{display:flex; align-items:flex-start; gap:12px; background:var(--card2); border:1px solid var(--stroke); border-radius:18px; padding:14px; cursor:pointer; transition:box-shadow .15s;}
+    .filecard:hover{box-shadow:0 0 0 2px var(--brand);}
+    .cover{width:72px; height:72px; border-radius:18px; object-fit:cover; background:var(--bg2); border:1px solid var(--stroke); display:block; flex-shrink:0;}
+    .filemeta{flex:1; min-width:0;}
     .filemeta h4{margin:0 0 4px; font-size:1rem; line-height:1.2;}
-    .filemeta p{margin:0; color:var(--muted); font-size:.92rem;}
-    .tags{display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;}
-    .tag{
-      font-size:.75rem;
-      padding:5px 9px;
-      border-radius:999px;
-      background:color-mix(in srgb, var(--brand) 12%, var(--card2));
-      color:var(--brand);
-      border:1px solid color-mix(in srgb, var(--brand) 22%, transparent);
-      font-weight:700;
-    }
-    .progresswrap{
-      grid-column:1 / -1;
-      display:grid;
-      gap:6px;
-      margin-top:2px;
-    }
-    .progressbar{
-      height:8px;
-      border-radius:999px;
-      background:var(--bg2);
-      overflow:hidden;
-    }
-    .progressbar span{
-      display:block;
-      height:100%;
-      width:0%;
-      background:linear-gradient(90deg, var(--brand), var(--blue));
-      transition:width .2s ease;
-    }
-    .logbox{
-      margin-top:12px;
-      background:var(--card2);
-      border:1px solid var(--stroke);
-      border-radius:24px;
-      box-shadow:var(--shadow2);
-      overflow:hidden;
-    }
-    .loghead{
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      gap:12px;
-      padding:12px 14px;
-      border-bottom:1px solid var(--stroke);
-      background:color-mix(in srgb, var(--brand) 6%, var(--card2));
-    }
-    .loghead strong{font-family:var(--font2); letter-spacing:-.02em;}
-    .loglist{
-      max-height:240px;
-      overflow:auto;
-      padding:10px 12px;
-      display:grid;
-      gap:8px;
-    }
-    .logitem{
-      display:flex;
-      gap:10px;
-      align-items:flex-start;
-      padding:10px 12px;
-      border-radius:16px;
-      background:var(--card);
-      border:1px solid var(--stroke);
-      color:var(--muted);
-      font-size:.92rem;
-    }
-    .dot{
-      width:9px;height:9px;border-radius:50%;
-      margin-top:5px;
-      background:var(--brand);
-      flex:0 0 auto;
-    }
-    .logitem.ok .dot{background:var(--ok)}
-    .logitem.warn .dot{background:var(--warn)}
-    .logitem.bad .dot{background:var(--bad)}
-    .footer{
-      margin-top:14px;
-      padding:14px 8px 4px;
-      text-align:center;
-      color:var(--muted);
-      font-size:.92rem;
-    }
-    .footer a{text-decoration:none; font-weight:700; color:var(--brand);}
-    .modal-backdrop{
-      position:fixed;
-      inset:0;
-      background:rgba(0,0,0,.45);
-      display:none;
-      align-items:center;
-      justify-content:center;
-      padding:16px;
-      z-index:200;
-    }
-    .modal{
-      width:min(860px, 100%);
-      max-height:min(86vh, 860px);
-      overflow:auto;
-      background:var(--card2);
-      border:1px solid var(--stroke);
-      border-radius:28px;
-      box-shadow:var(--shadow);
-      padding:18px;
-    }
-    .modal-head{
-      display:flex;
-      justify-content:space-between;
-      align-items:flex-start;
-      gap:12px;
-      margin-bottom:14px;
-    }
-    .modal-head h3{
-      margin:0;
-      font-family:var(--font2);
-      font-size:1.2rem;
-    }
-    .modal-grid{
-      display:grid;
-      grid-template-columns: 160px 1fr;
-      gap:16px;
-    }
-    .modal-cover{
-      width:160px;
-      height:160px;
-      object-fit:cover;
-      border-radius:22px;
-      border:1px solid var(--stroke);
-      background:var(--bg2);
-    }
-    .meta-table{
-      width:100%;
-      border-collapse:collapse;
-      margin-top:8px;
-      overflow:hidden;
-      border-radius:16px;
-    }
-    .meta-table td{
-      border-top:1px solid var(--stroke);
-      padding:10px 8px;
-      vertical-align:top;
-      font-size:.95rem;
-    }
+    .filemeta p{margin:0; color:var(--muted); font-size:.85rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+    .tags{display:flex; flex-wrap:wrap; gap:5px; margin-top:6px;}
+    .tag{background:var(--bg); border:1px solid var(--stroke); border-radius:999px; padding:2px 9px; font-size:.75rem; color:var(--muted);}
+    .progresswrap{min-width:90px; display:flex; flex-direction:column; align-items:flex-end; gap:5px;}
+    .progressbar{width:80px; height:8px; background:var(--bg2); border-radius:999px; overflow:hidden;}
+    .progressbar span{display:block; height:100%; background:var(--brand); border-radius:999px; transition:width .3s;}
+    /* LOG */
+    .logbox{background:var(--bg2); border-radius:16px; padding:12px; font-size:.82rem; font-family:monospace; max-height:220px; overflow-y:auto; display:flex; flex-direction:column; gap:3px;}
+    .log-ok{color:var(--ok);}
+    .log-warn{color:var(--warn);}
+    .log-info{color:var(--info);}
+    .log-error{color:var(--bad);}
+    /* MODAL */
+    .modal-backdrop{position:fixed; inset:0; background:rgba(0,0,0,.45); display:none; align-items:center; justify-content:center; padding:16px; z-index:200;}
+    .modal{width:min(860px,100%); max-height:min(86vh,860px); overflow:auto; background:var(--card2); border:1px solid var(--stroke); border-radius:28px; box-shadow:var(--shadow); padding:18px;}
+    .modal-head{display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:14px;}
+    .modal-head h3{margin:0; font-family:var(--font2); font-size:1.2rem;}
+    .modal-grid{display:grid; grid-template-columns:160px 1fr; gap:16px;}
+    .modal-cover{width:160px; height:160px; object-fit:cover; border-radius:22px; border:1px solid var(--stroke); background:var(--bg2);}
+    .meta-table{width:100%; border-collapse:collapse; margin-top:8px; overflow:hidden; border-radius:16px;}
+    .meta-table td{border-top:1px solid var(--stroke); padding:10px 8px; vertical-align:top; font-size:.95rem;}
     .meta-table td:first-child{color:var(--muted); width:160px; font-weight:700;}
-    .modal-list{
-      margin:10px 0 0;
-      padding-left:18px;
-    }
+    .modal-list{margin:10px 0 0; padding-left:18px;}
     .modal-list li{margin:4px 0; color:var(--text);}
-    @media (max-width: 980px){
-      .hero,.grid{grid-template-columns:1fr}
-      .queue{max-height:none}
-    }
-    @media (max-width: 640px){
-      .shell{width:min(calc(100% - 12px), 1220px); padding-top:8px}
-      .topbar{padding-top:8px}
-      .topbar-inner{align-items:flex-start}
-      .brandbox{align-items:flex-start}
-      .logo{width:44px;height:44px;border-radius:14px}
-      .hero-main h2{font-size:clamp(1.8rem, 10vw, 2.7rem)}
-      .hero-pills{grid-template-columns:1fr}
-      .settings,.actions{grid-template-columns:1fr}
-      .filecard{grid-template-columns:64px 1fr}
-      .cover{width:64px;height:64px;border-radius:16px}
-      .panel,.hero-main,.hero-side{padding:14px}
-      .btn,.filepick,.iconbtn{min-height:54px}
-      .modal-grid{grid-template-columns:1fr}
-      .modal-cover{width:100%; height:auto; aspect-ratio:1/1}
+    /* FOOTER */
+    .footer{background:var(--card); border-top:1px solid var(--stroke); padding:16px; text-align:center; font-size:.82rem; color:var(--muted);}
+    @media(max-width:600px){
+      .settings-grid{grid-template-columns:1fr;}
+      .modal-grid{grid-template-columns:1fr;}
+      .modal-cover{width:100%; height:180px;}
+      .progresswrap{display:none;}
     }
   </style>
 </head>
 <body>
-<main class="shell">
-  <header class="topbar">
-    <div class="topbar-inner">
-      <div class="brandbox">
-        <div class="logo" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M5 7.5 12 4l7 3.5v9L12 20l-7-3.5z"></path>
-            <path d="M9 10.1v3.8"></path>
-            <path d="M12 9v6"></path>
-            <path d="M15 8.1v7.8"></path>
-          </svg>
-        </div>
-        <div class="brandtext">
-          <h1>Klangkiste Go</h1>
-          <p>TAF-Konverter für Browser, Smartphone und GitHub Pages.</p>
-        </div>
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brandbox">
+      <div class="logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 7.5 12 4l7 3.5v9L12 20l-7-3.5z"></path>
+          <path d="M9 10.1v3.8"></path>
+          <path d="M12 9v6"></path>
+          <path d="M15 8.1v7.8"></path>
+        </svg>
       </div>
-      <div class="topactions">
-        <button class="iconbtn" type="button" id="themeBtn" aria-label="Hell/Dunkel umschalten">◐</button>
+      <div class="brandtext">
+        <h1>Klangkiste Go</h1>
+        <p>TAF-Konverter für Browser, Smartphone und GitHub Pages.</p>
       </div>
     </div>
-  </header>
+    <div class="topactions">
+      <span class="version-badge">v1.11</span>
+      <a class="gh-link" href="https://github.com/basecore/taf-klangkiste" target="_blank" rel="noreferrer" aria-label="GitHub">GitHub</a>
+      <button class="iconbtn" type="button" id="themeBtn" aria-label="Hell/Dunkel umschalten">◐</button>
+    </div>
+  </div>
+</header>
 
-  <section class="hero">
-    <article class="card hero-main">
-      <span class="badge">Browser-Converter · mobil optimiert</span>
-      <h2>TAF-Dateien direkt im Browser konvertieren.</h2>
-      <p>Mit Tonie-DB, Cover-Vorschau, Detailansicht, Log-Fenster und ZIP-Export – ohne Server-Upload und passend für GitHub Pages.</p>
-      <div class="hero-pills">
-        <div class="pill">MP3 / M4A / OGG</div>
-        <div class="pill">Cover & Kapitel-CUE</div>
-        <div class="pill">klangkiste.json optional</div>
-        <div class="pill">Smartphone-UI</div>
+<main>
+  <div class="hero">
+    <h2>TAF-Dateien direkt im Browser konvertieren.</h2>
+    <p>Mit Tonie-DB, Cover-Vorschau, Detailansicht, Log-Fenster und ZIP-Export – ohne Server-Upload und passend für GitHub Pages.</p>
+    <div class="feature-chips">
+      <span class="chip">MP3 / M4A / OGG</span>
+      <span class="chip">Cover &amp; Kapitel-CUE</span>
+      <span class="chip">klangkiste.json optional</span>
+      <span class="chip">Smartphone-UI</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Dateien auswählen</div>
+    <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="TAF-Dateien auswählen oder hier ablegen">
+      <p><strong>TAF-Dateien hier ablegen</strong><br>oder unten antippen, um Dateien auszuwählen.</p>
+    </div>
+    <input type="file" id="fileInput" accept=".taf" multiple hidden>
+    <div class="btn-row">
+      <button class="btn btn-primary" type="button" id="pickBtn">Dateien auswählen</button>
+      <button class="btn btn-secondary" type="button" id="demoBtn">Demo laden</button>
+      <button class="btn btn-danger" type="button" id="clearBtn">Liste leeren</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Einstellungen</div>
+    <div class="settings-grid">
+      <div class="field">
+        <label class="field-label" for="formatSelect">Ausgabeformat</label>
+        <select id="formatSelect">
+          <option value="mp3">MP3</option>
+          <option value="m4a">M4A (AAC)</option>
+          <option value="ogg">OGG (direkt)</option>
+        </select>
       </div>
-    </article>
-    <aside class="card hero-side">
-      <div class="metric"><strong id="metricFiles">0</strong><span>Dateien in der Warteschlange</span></div>
-      <div class="metric"><strong id="metricConverted">0</strong><span>Konvertiert in dieser Sitzung</span></div>
-      <div class="metric"><strong id="metricDb">nicht geladen</strong><span>Tonie-Datenbank-Status</span></div>
-    </aside>
-  </section>
-
-  <section class="grid">
-    <article class="card panel">
-      <h3>Import & Einstellungen</h3>
-
-      <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="TAF Dateien auswählen oder hineinziehen">
-        <strong>TAF-Dateien hier ablegen</strong>
-        <p>oder unten antippen, um Dateien auszuwählen.</p>
-        <label class="filepick" for="fileInput">TAF-Dateien auswählen</label>
-        <input class="sr-only" type="file" id="fileInput" accept=".taf" multiple />
+      <div class="field">
+        <label class="field-label" for="qualitySelect">Qualität / Bitrate</label>
+        <select id="qualitySelect">
+          <option value="96k">96 kbps</option>
+          <option value="128k" selected>128 kbps</option>
+          <option value="192k">192 kbps</option>
+          <option value="256k">256 kbps</option>
+          <option value="320k">320 kbps</option>
+        </select>
       </div>
-
-      <div class="settings">
-        <div class="field">
-          <label for="formatSelect">Ausgabeformat</label>
-          <select id="formatSelect">
-            <option value="mp3">MP3 – beste Kompatibilität</option>
-            <option value="m4a">M4A / AAC – klein und modern</option>
-            <option value="ogg">OGG – direkt übernehmen</option>
-          </select>
-        </div>
-        <div class="field">
-          <label for="qualitySelect">Qualität / Bitrate</label>
-          <select id="qualitySelect">
-            <option value="128k">128 kbps</option>
-            <option value="192k" selected>192 kbps</option>
-            <option value="256k">256 kbps</option>
-            <option value="320k">320 kbps</option>
-          </select>
-        </div>
-        <div class="field">
-          <label for="artistFallback">Fallback Artist</label>
-          <input id="artistFallback" type="text" value="Tonie" placeholder="z. B. Tonie" />
-        </div>
-        <div class="field">
-          <label for="commentLimit">Kommentar-Limit</label>
-          <input id="commentLimit" type="number" min="0" step="100" value="5000" />
-        </div>
+      <div class="field">
+        <label class="field-label" for="artistFallback">Fallback-Künstler</label>
+        <input type="text" id="artistFallback" value="Tonie" placeholder="z.B. Tonie">
       </div>
-
-      <div class="checks">
-        <label class="check"><input type="checkbox" id="embedCover" checked /><span><strong>Cover einbetten</strong><br><span style="color:var(--muted)">Cover aus der Tonie-DB in MP3/M4A einfügen, sofern verfügbar.</span></span></label>
-        <label class="check"><input type="checkbox" id="createJson" /><span><strong>klangkiste.json erzeugen</strong><br><span style="color:var(--muted)">Metadaten als JSON ausgeben.</span></span></label>
-        <label class="check"><input type="checkbox" id="createCovers" checked /><span><strong>Cover separat speichern</strong><br><span style="color:var(--muted)">JPG-Dateien zusätzlich mit in das ZIP legen.</span></span></label>
-        <label class="check"><input type="checkbox" id="zipAll" checked /><span><strong>Alles als ZIP herunterladen</strong><br><span style="color:var(--muted)">Praktisch für mehrere Dateien am Smartphone.</span></span></label>
+      <div class="field">
+        <label class="field-label" for="commentLimit">Kommentar max. Zeichen (0 = unbegrenzt)</label>
+        <input type="number" id="commentLimit" value="500" min="0" step="50">
       </div>
+    </div>
+    <div class="checks" style="margin-top:14px;">
+      <label class="check"><input type="checkbox" id="embedCover" checked /><span><strong>Cover einbetten</strong><br><span style="color:var(--muted)">Cover in MP3/M4A einbetten (wenn verfügbar).</span></span></label>
+      <label class="check"><input type="checkbox" id="createCovers" checked /><span><strong>Cover separat speichern</strong><br><span style="color:var(--muted)">JPG-Dateien zusätzlich mit in das ZIP legen.</span></span></label>
+      <label class="check"><input type="checkbox" id="createJson" /><span><strong>klangkiste.json erzeugen</strong><br><span style="color:var(--muted)">Metadaten als JSON ausgeben.</span></span></label>
+      <label class="check"><input type="checkbox" id="zipAll" checked /><span><strong>Alles als ZIP herunterladen</strong><br><span style="color:var(--muted)">Alle Dateien in einem ZIP-Archiv bündeln.</span></span></label>
+    </div>
+  </div>
 
-      <div class="actions">
-        <button class="btn btn-primary" id="convertBtn" type="button">Konvertierung starten</button>
-        <button class="btn btn-secondary" id="downloadJsonBtn" type="button">Nur JSON laden</button>
-        <button class="btn btn-secondary" id="demoBtn" type="button">Demo laden</button>
-        <button class="btn btn-danger" id="stopBtn" type="button">Stopp</button>
-        <button class="btn btn-danger" id="clearBtn" type="button">Liste leeren</button>
-      </div>
+  <div class="card">
+    <div class="card-title">Warteschlange</div>
+    <div class="queue-list" id="queue">
+      <div class="statusline">Noch keine Dateien ausgewählt.</div>
+    </div>
+    <div class="metrics" id="metrics">
+      <div class="metric"><strong id="metricFiles">0</strong>Dateien</div>
+      <div class="metric"><strong id="metricConverted">0</strong>Konvertiert</div>
+      <div class="metric"><strong id="metricDb">–</strong>Tonie-DB</div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" type="button" id="convertBtn">Konvertieren &amp; ZIP laden</button>
+      <button class="btn btn-danger" type="button" id="stopBtn">Stopp</button>
+      <button class="btn btn-secondary" type="button" id="downloadJsonBtn" style="display:none;">Nur JSON laden</button>
+    </div>
+    <div class="statusbox">
+      <div class="statusline">Status: <strong id="statusText">Bereit.</strong></div>
+      <div class="statusline" id="engineStatus">FFmpeg: nicht geladen.</div>
+      <div class="statusline" id="dbStatus">Tonie-DB: nicht geladen.</div>
+    </div>
+  </div>
 
-      <div class="statusbox">
-        <div class="statusline">Status: <strong id="statusText">Bereit.</strong></div>
-        <div class="statusline" id="engineStatus">Encoder: noch nicht geladen.</div>
-        <div class="statusline" id="dbStatus">Tonie-Datenbank: noch nicht geladen.</div>
-      </div>
-
-      <div class="logbox">
-        <div class="loghead">
-          <strong>Log</strong>
-          <span style="color:var(--muted); font-size:.9rem">Import · DB · Konvertierung</span>
-        </div>
-        <div class="loglist" id="logList"></div>
-      </div>
-    </article>
-
-    <article class="card panel preview">
-      <h3>Vorschau</h3>
-      <div id="queue" class="queue"></div>
-    </article>
-  </section>
+  <div class="card">
+    <div class="card-title">Log</div>
+    <div class="logbox" id="logList"></div>
+  </div>
 
   <footer class="footer">
-    <div>Klangkiste Go · gebaut für GitHub Pages und Smartphones</div>
+    <div>Projekt: <a href="https://github.com/basecore/taf-klangkiste" target="_blank" rel="noreferrer">github.com/basecore/taf-klangkiste</a></div>
+    <div style="margin-top:6px">Klangkiste Go · gebaut für GitHub Pages und Smartphones</div>
   </footer>
 </main>
 
+<!-- Tonie-Detail-Modal -->
 <div class="modal-backdrop" id="detailModal">
   <div class="modal">
     <div class="modal-head">
@@ -586,13 +259,11 @@
 </div>
 
 <script type="module">
-  import { FFmpeg } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js';
-  import { fetchFile, toBlobURL } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js';
+  import { FFmpeg } from './assets/ffmpeg/ffmpeg.js';
+  import { fetchFile, toBlobURL } from './assets/ffmpeg/util.js';
   import JSZip from 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm';
 
-  const FFMPEG_BASE = './assets/ffmpeg';
   const HEADER_SIZE = 4096;
-  const OPUS_SAMPLE_RATE = 48000;
   const TONIES_DB_URL = 'https://raw.githubusercontent.com/toniebox-reverse-engineering/tonies-json/release/toniesV2.json';
 
   const state = {
@@ -605,174 +276,108 @@
     generatedEntries: [],
     logs: [],
     abortRequested: false,
-    pendingConfirm: null,
     modalItem: null
   };
 
   const els = {
-    themeBtn: document.getElementById('themeBtn'),
-    dropzone: document.getElementById('dropzone'),
-    fileInput: document.getElementById('fileInput'),
-    queue: document.getElementById('queue'),
-    logList: document.getElementById('logList'),
-    formatSelect: document.getElementById('formatSelect'),
-    qualitySelect: document.getElementById('qualitySelect'),
-    artistFallback: document.getElementById('artistFallback'),
-    commentLimit: document.getElementById('commentLimit'),
-    embedCover: document.getElementById('embedCover'),
-    createJson: document.getElementById('createJson'),
-    createCovers: document.getElementById('createCovers'),
-    zipAll: document.getElementById('zipAll'),
-    convertBtn: document.getElementById('convertBtn'),
-    stopBtn: document.getElementById('stopBtn'),
+    themeBtn:        document.getElementById('themeBtn'),
+    dropzone:        document.getElementById('dropzone'),
+    fileInput:       document.getElementById('fileInput'),
+    pickBtn:         document.getElementById('pickBtn'),
+    queue:           document.getElementById('queue'),
+    logList:         document.getElementById('logList'),
+    formatSelect:    document.getElementById('formatSelect'),
+    qualitySelect:   document.getElementById('qualitySelect'),
+    artistFallback:  document.getElementById('artistFallback'),
+    commentLimit:    document.getElementById('commentLimit'),
+    embedCover:      document.getElementById('embedCover'),
+    createJson:      document.getElementById('createJson'),
+    createCovers:    document.getElementById('createCovers'),
+    zipAll:          document.getElementById('zipAll'),
+    convertBtn:      document.getElementById('convertBtn'),
+    stopBtn:         document.getElementById('stopBtn'),
     downloadJsonBtn: document.getElementById('downloadJsonBtn'),
-    demoBtn: document.getElementById('demoBtn'),
-    clearBtn: document.getElementById('clearBtn'),
-    statusText: document.getElementById('statusText'),
-    engineStatus: document.getElementById('engineStatus'),
-    dbStatus: document.getElementById('dbStatus'),
-    metricFiles: document.getElementById('metricFiles'),
+    demoBtn:         document.getElementById('demoBtn'),
+    clearBtn:        document.getElementById('clearBtn'),
+    statusText:      document.getElementById('statusText'),
+    engineStatus:    document.getElementById('engineStatus'),
+    dbStatus:        document.getElementById('dbStatus'),
+    metricFiles:     document.getElementById('metricFiles'),
     metricConverted: document.getElementById('metricConverted'),
-    metricDb: document.getElementById('metricDb'),
-    detailModal: document.getElementById('detailModal'),
-    closeModalBtn: document.getElementById('closeModalBtn'),
-    modalTitle: document.getElementById('modalTitle'),
-    modalSubtitle: document.getElementById('modalSubtitle'),
-    modalCover: document.getElementById('modalCover'),
-    modalMeta: document.getElementById('modalMeta'),
-    modalTracks: document.getElementById('modalTracks')
+    metricDb:        document.getElementById('metricDb'),
+    detailModal:     document.getElementById('detailModal'),
+    closeModalBtn:   document.getElementById('closeModalBtn'),
+    modalTitle:      document.getElementById('modalTitle'),
+    modalSubtitle:   document.getElementById('modalSubtitle'),
+    modalCover:      document.getElementById('modalCover'),
+    modalMeta:       document.getElementById('modalMeta'),
+    modalTracks:     document.getElementById('modalTracks')
   };
 
-  function log(message, type='info') {
-    const item = { message, type, time: new Date().toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit', second:'2-digit' }) };
+  /* ── Logging ── */
+  function log(message, type = 'info') {
+    const item = {
+      message, type,
+      time: new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    };
     state.logs.unshift(item);
     state.logs = state.logs.slice(0, 40);
     renderLogs();
   }
 
   function renderLogs() {
-    els.logList.innerHTML = state.logs.length ? state.logs.map(entry => `
-      <div class="logitem ${entry.type}">
-        <span class="dot"></span>
-        <div><strong style="color:var(--text)">${entry.time}</strong> · ${entry.message}</div>
-      </div>
-    `).join('') : '<div class="logitem"><span class="dot"></span><div>Noch keine Log-Einträge.</div></div>';
+    els.logList.innerHTML = state.logs.map(l =>
+      `<div class="log-${l.type}">[${l.time}] ${l.message}</div>`
+    ).join('');
   }
 
+  /* ── Status ── */
+  function setStatus(msg) { els.statusText.textContent = msg; }
+  function setEngineStatus(msg) { els.engineStatus.textContent = `FFmpeg: ${msg}`; }
+  function setDbStatus(msg) { els.dbStatus.textContent = `Tonie-DB: ${msg}`; }
+
+  /* ── Metrics ── */
   function updateMetrics() {
-    els.metricFiles.textContent = String(state.files.length);
-    els.metricConverted.textContent = String(state.converted);
-    els.metricDb.textContent = state.dbLoaded ? `${Object.keys(state.toniesDb).length} Hashes` : 'nicht geladen';
+    els.metricFiles.textContent = state.files.length;
+    els.metricConverted.textContent = state.converted;
+    els.metricDb.textContent = state.dbLoaded ? Object.keys(state.toniesDb).length.toLocaleString('de-DE') : '–';
   }
 
-  function setStatus(text) { els.statusText.textContent = text; }
-  function setDbStatus(text) { els.dbStatus.textContent = text; }
-  function setEngineStatus(text) { els.engineStatus.textContent = text; }
-
-  function cleanFilename(name) {
-    return (name || '').replace(/[^\w .\-()äöüÄÖÜß]/g, '_').trim() || 'unbekannt';
+  /* ── Theme ── */
+  function applyTheme(dark) {
+    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
   }
+  els.themeBtn.addEventListener('click', () => {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    applyTheme(!isDark);
+  });
 
-  async function sha1Hex(input) {
-    const bytes = input instanceof Uint8Array ? input : new Uint8Array(input);
-    const digest = await crypto.subtle.digest('SHA-1', bytes);
-    return [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, '0')).join('');
+  /* ── JSON-Button Sichtbarkeit ── */
+  function updateJsonBtnVisibility() {
+    els.downloadJsonBtn.style.display = els.createJson.checked ? '' : 'none';
   }
+  els.createJson.addEventListener('change', updateJsonBtnVisibility);
+  updateJsonBtnVisibility();
 
-  function normalizeDb(jsonData) {
-    const db = {};
-    if (Array.isArray(jsonData)) {
-      for (const item of jsonData) {
-        if (item?.article && item?.data) {
-          for (const entry of item.data || []) {
-            for (const audioId of (entry.ids || [])) {
-              const h = audioId?.hash;
-              if (h) db[h.toLowerCase()] = entry;
-            }
-          }
-        } else if (item?.hash) {
-          const hashes = Array.isArray(item.hash) ? item.hash : [item.hash];
-          for (const h of hashes) if (h) db[h.toLowerCase()] = item;
-        }
-      }
-    }
-    return db;
-  }
-
-  function detectTags(title, desc, genre='') {
-    const tags = new Set();
-    const full = `${title || ''} ${desc || ''} ${genre || ''}`.toLowerCase();
-    const map = {
-      'Weihnachten': ['weihnacht', 'advent', 'christmas', 'nikolaus', 'rentier', 'krippe', 'winter'],
-      'Märchen': ['märchen', 'fee', 'hex', 'prinz', 'könig', 'wolf', 'rotkäppchen', 'grimm', 'fabel'],
-      'Tiere': ['tier', 'zoo', 'bauernhof', 'dino', 'pferd', 'hund', 'katze', 'löwe', 'bär', 'wal'],
-      'Einschlafen': ['schlaf', 'gute nacht', 'träum', 'sandmann', 'lullaby', 'ruhe', 'bett'],
-      'Musik': ['lied', 'sing', 'musik', 'song', 'tanzen', 'rhythmus', 'orchester', 'minimusiker'],
-      'Lernen': ['wissen', 'lernen', 'schule', 'was ist was', 'entdeck', 'forscher', 'englisch', 'buchstabe', 'zahl'],
-      'Abenteuer': ['abenteuer', 'pirat', 'räuber', 'schatz', 'reise', 'detektiv', 'drache', 'ritter'],
-      'Disney': ['disney', 'pixar', 'micky', 'minnie', 'donald', 'goofy'],
-      'Helden': ['held', 'super', 'spidey', 'batman', 'paw patrol', 'feuerwehrmann', 'ninjago']
-    };
-    for (const [category, words] of Object.entries(map)) {
-      if (words.some(word => full.includes(word))) tags.add(category);
-    }
-    if (genre) tags.add(genre);
-    return [...tags];
-  }
-
-  function summarizeMeta(meta) {
-    const parts = [];
-    if (meta.series) parts.push(meta.series);
-    if (meta.episode) parts.push(meta.episode);
-    if (meta.description) parts.push(meta.description);
-    return parts.join(' | ');
-  }
-
-  function granuleToCue(granule) {
-    const seconds = granule / OPUS_SAMPLE_RATE;
-    const m = Math.floor(seconds / 60);
-    const s = Math.floor(seconds % 60);
-    const f = Math.floor((seconds - Math.floor(seconds)) * 75);
-    return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}:${String(f).padStart(2,'0')}`;
-  }
-
-  function buildCue(title, outputName, chapters, pageMap, trackList=[]) {
-    let out = `REM CREATED BY KLANGKISTE GO\nTITLE "${String(title).replace(/"/g, "'")}"\nFILE "${outputName}" ${outputName.toLowerCase().endsWith('.mp3') ? 'MP3' : 'WAVE'}\n`;
-    chapters.forEach((ch, idx) => {
-      let ts = '00:00:00';
-      if (ch > 0 && (ch - 1) in pageMap) ts = granuleToCue(pageMap[ch - 1]);
-      const tName = trackList[idx] || `Kapitel ${idx + 1}`;
-      out += `  TRACK ${String(idx + 1).padStart(2,'0')} AUDIO\n    TITLE "${String(tName).replace(/"/g, "'")}"\n    INDEX 01 ${ts}\n`;
-    });
-    return out;
-  }
-
-  function buildKlangkisteEntry(fileHash, title, outputName, imageFileName, desc, age, genre, series, runtime, tags) {
-    return {
-      tagId: `auto_${fileHash ? fileHash.slice(0, 10) : 'unknown'}`,
-      name: title,
-      playlistFileNames: [outputName],
-      imageFileName: imageFileName || null,
-      meta: {
-        description: desc || '',
-        age_recommendation: age || 0,
-        genre: genre || 'Hörspiel',
-        series: series || '',
-        runtime: runtime || 0
-      },
-      filter_age: age || 0,
-      tags: tags || []
-    };
-  }
-
+  /* ── Modal ── */
   function openModal(item) {
     if (!item) return;
     state.modalItem = item;
     const meta = item.meta || {};
     els.modalTitle.textContent = item.displayTitle || item.file.name;
     els.modalSubtitle.textContent = meta.web || meta.series || '';
-    els.modalCover.src = item.coverUrl || item.coverObjectUrl || '';
+
+    // Cover direkt per URL anzeigen – kein CORS-Fetch nötig
+    const coverSrc = item.coverUrl || '';
+    if (coverSrc) {
+      els.modalCover.src = coverSrc;
+      els.modalCover.style.display = '';
+    } else {
+      els.modalCover.removeAttribute('src');
+      els.modalCover.style.display = 'none';
+    }
     els.modalCover.alt = item.displayTitle || 'Cover';
+
     els.modalMeta.innerHTML = `
       <tr><td>Serie</td><td>${meta.series || '—'}</td></tr>
       <tr><td>Episode</td><td>${meta.episode || '—'}</td></tr>
@@ -780,13 +385,15 @@
       <tr><td>Alter</td><td>${meta.age || '—'}</td></tr>
       <tr><td>Sprache</td><td>${meta.language || '—'}</td></tr>
       <tr><td>Kategorie</td><td>${meta.category || '—'}</td></tr>
-      <tr><td>Hash</td><td>${item.hash || '—'}</td></tr>
+      <tr><td>Hash</td><td><code style="font-size:.82rem; word-break:break-all">${item.hash || '—'}</code></td></tr>
       <tr><td>Audio-ID</td><td>${meta.audio_id || meta['audio-id'] || '—'}</td></tr>
-      <tr><td>Größe</td><td>${meta.size || '—'}</td></tr>
+      <tr><td>Größe</td><td>${meta.size ? `${(meta.size / 1024 / 1024).toFixed(1)} MB` : '—'}</td></tr>
       <tr><td>Web</td><td>${meta.web ? `<a href="${meta.web}" target="_blank" rel="noreferrer">Tonies-Seite öffnen</a>` : '—'}</td></tr>
     `;
-    const tracks = meta['track-desc'] || meta.tracks || [];
-    els.modalTracks.innerHTML = tracks.length ? tracks.map(t => `<li>${t}</li>`).join('') : '<li>Keine Trackliste vorhanden.</li>';
+    const tracks = item.trackList || meta['track-desc'] || meta.tracks || [];
+    els.modalTracks.innerHTML = tracks.length
+      ? tracks.map(t => `<li>${t}</li>`).join('')
+      : '<li>Keine Trackliste vorhanden.</li>';
     els.detailModal.style.display = 'flex';
   }
 
@@ -795,6 +402,221 @@
     state.modalItem = null;
   }
 
+  /* ── Helpers ── */
+  function cleanFilename(name) {
+    return name.replace(/[/\\?%*:|"<>]/g, '-').replace(/\s+/g, '_').slice(0, 120);
+  }
+
+  async function sha1Hex(input) {
+    const bytes = input instanceof Uint8Array ? input : new Uint8Array(input);
+    const digest = await crypto.subtle.digest('SHA-1', bytes);
+    return [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  function detectTags(title, desc, genre) {
+    const src = `${title} ${desc} ${genre}`.toLowerCase();
+    const map = {
+      'Hörspiel': ['hörspiel','hsp'],
+      'Musik': ['musik','lied','song','kinderlieder'],
+      'Märchen': ['märchen','grimm','andersen'],
+      'Wissen': ['wissen','erklärt','planet','natur'],
+      'Schlaf': ['schlaf','einschlaf','nacht'],
+      'Sprache': ['englisch','french','español','language']
+    };
+    return Object.entries(map).filter(([,kws]) => kws.some(kw => src.includes(kw))).map(([tag]) => tag);
+  }
+
+  function summarizeMeta(meta) {
+    const parts = [];
+    if (meta.age) parts.push(`Ab ${meta.age} Jahren`);
+    if (meta.runtime) parts.push(`${meta.runtime} min`);
+    if (meta.language) parts.push(meta.language);
+    return parts.join(' · ');
+  }
+
+  function getChaptersRobust(uint8) {
+    try {
+      const view = new DataView(uint8.buffer);
+      const chapters = [];
+      for (let i = 0; i < HEADER_SIZE - 4; i += 4) {
+        const val = view.getUint32(i, false);
+        if (val > 0 && val < uint8.length) chapters.push(val);
+      }
+      return [...new Set(chapters)].sort((a, b) => a - b).slice(0, 99);
+    } catch { return []; }
+  }
+
+  function scanOggTimestamps(uint8) {
+    const map = {};
+    for (let i = 0; i < uint8.length - 27; i++) {
+      if (uint8[i] === 0x4F && uint8[i+1] === 0x67 && uint8[i+2] === 0x67 && uint8[i+3] === 0x53) {
+        const lo = (uint8[i+6]) | (uint8[i+7]<<8) | (uint8[i+8]<<16) | (uint8[i+9]<<24);
+        const hi = (uint8[i+10]) | (uint8[i+11]<<8) | (uint8[i+12]<<16) | (uint8[i+13]<<24);
+        const gran = hi * 2**32 + lo;
+        map[i] = gran / 48000;
+      }
+    }
+    return map;
+  }
+
+  function buildCue(title, audioFile, chapters, pageMap, trackNames) {
+    const pages = Object.keys(pageMap).map(Number).sort((a, b) => a - b);
+    const getTime = (byteOffset) => {
+      let best = 0, bestDiff = Infinity;
+      for (const p of pages) {
+        const diff = Math.abs(p - byteOffset);
+        if (diff < bestDiff) { bestDiff = diff; best = p; }
+      }
+      const secs = pageMap[best] || 0;
+      const mm = Math.floor(secs / 60).toString().padStart(2, '0');
+      const ss = Math.floor(secs % 60).toString().padStart(2, '0');
+      const ff = Math.floor((secs % 1) * 75).toString().padStart(2, '0');
+      return `${mm}:${ss}:${ff}`;
+    };
+    let cue = `TITLE "${title}"\nFILE "${audioFile}" MP3\n`;
+    chapters.forEach((offset, i) => {
+      const trackNum = (i + 1).toString().padStart(2, '0');
+      const trackTitle = trackNames[i] || `Track ${i + 1}`;
+      cue += `  TRACK ${trackNum} AUDIO\n    TITLE "${trackTitle}"\n    INDEX 01 ${getTime(offset)}\n`;
+    });
+    return cue;
+  }
+
+  function buildKlangkisteEntry(hash, title, audioFile, coverFile, desc, age, genre, series, runtime, tags) {
+    return { hash, title, audioFile, coverFile: coverFile || null, description: desc, age, genre, series, runtime, tags };
+  }
+
+  function triggerDownload(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+  }
+
+  /* ── Tonie-DB ── */
+  async function fetchToniesDb() {
+    if (state.dbLoaded) return;
+    setDbStatus('wird geladen …');
+    try {
+      const res = await fetch(TONIES_DB_URL);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const raw = await res.json();
+      // toniesV2: Array of objects with audioId and field data
+      const db = {};
+      const arr = Array.isArray(raw) ? raw : Object.values(raw);
+      for (const entry of arr) {
+        const hashes = entry.hash || entry.hashes || [];
+        const hashList = Array.isArray(hashes) ? hashes : [hashes];
+        for (const h of hashList) {
+          if (h) db[h.toLowerCase()] = {
+            series:      entry.series || entry.tonieSeries || '',
+            episode:     entry.episode || entry.tonieDetails || '',
+            description: entry.description || '',
+            image:       entry.pic || entry.image || '',
+            age:         entry.age || 0,
+            runtime:     entry.runtime || 0,
+            language:    entry.language || '',
+            category:    entry.category || '',
+            genre:       entry.category || 'Hörspiel',
+            audio_id:    entry.audioId || '',
+            size:        entry.size || 0,
+            web:         entry.shop?.url || '',
+            'track-desc': entry['track-desc'] || [],
+            tracks:      entry.tracks || []
+          };
+        }
+      }
+      state.toniesDb = db;
+      state.dbLoaded = true;
+      setDbStatus(`geladen (${Object.keys(db).length.toLocaleString('de-DE')} Einträge).`);
+      log(`Tonie-DB geladen: ${Object.keys(db).length.toLocaleString('de-DE')} Hashes.`, 'ok');
+      updateMetrics();
+    } catch (err) {
+      setDbStatus('Fehler beim Laden.');
+      log(`Tonie-DB Fehler: ${err.message}`, 'warn');
+    }
+  }
+
+  /* ── FFmpeg – lokal aus ./assets/ffmpeg/ ── */
+  async function ensureFfmpeg() {
+    if (state.ffmpegLoaded) return state.ffmpeg;
+    setEngineStatus('FFmpeg.wasm wird geladen …');
+    log('FFmpeg.wasm wird geladen …');
+
+    const ffmpeg = new FFmpeg();
+    // Lokale Pfade – kein CDN-Worker, kein CORS-Problem
+    const baseURL = new URL('./assets/ffmpeg/', window.location.href).href;
+    const [coreURL, wasmURL, workerURL] = await Promise.all([
+      toBlobURL(`${baseURL}ffmpeg-core.js`,        'text/javascript'),
+      toBlobURL(`${baseURL}ffmpeg-core.wasm`,      'application/wasm'),
+      toBlobURL(`${baseURL}ffmpeg-core.worker.js`, 'text/javascript')
+    ]);
+    await ffmpeg.load({
+      coreURL,
+      wasmURL,
+      workerURL,
+      classWorkerURL: `${baseURL}worker.js`
+    });
+
+    state.ffmpeg = ffmpeg;
+    state.ffmpegLoaded = true;
+    setEngineStatus('FFmpeg.wasm geladen und einsatzbereit.');
+    log('FFmpeg.wasm geladen und einsatzbereit.', 'ok');
+    return ffmpeg;
+  }
+
+  /* ── Datei einlesen & mit DB anreichern ── */
+  async function enrichFile(file) {
+    const arrayBuffer = await file.arrayBuffer();
+    const uint8 = new Uint8Array(arrayBuffer);
+    const audioSlice = uint8.slice(HEADER_SIZE);
+    // sha1Hex akzeptiert Uint8Array direkt
+    const hash = await sha1Hex(audioSlice);
+    const normalizedHash = hash.toLowerCase();
+    const meta = state.toniesDb[normalizedHash] || {};
+
+    const series  = meta.series  || '';
+    const episode = meta.episode || '';
+    const title   = series && episode
+      ? `${series} - ${episode}`
+      : (series || episode || meta.title || file.name.replace(/\.taf$/i, ''));
+    const desc  = meta.description || '';
+    const age   = Number.parseInt(meta.age || 0, 10) || 0;
+    const genre = meta.genre || 'Hörspiel';
+    const tags  = detectTags(title, desc, genre);
+    // Cover-URL direkt aus DB – kein fetch/Blob-Laden hier (vermeidet CORS-Fehler)
+    const coverUrl = meta.image || meta.pic || null;
+
+    const item = {
+      file,
+      buffer:      uint8,
+      audioBuffer: audioSlice,
+      hash:        normalizedHash,
+      meta,
+      displayTitle:  title,
+      status:        'Bereit',
+      progress:      0,
+      format:        els.formatSelect.value,
+      tags,
+      coverUrl,       // direkte URL, wird per <img src=...> angezeigt
+      coverBlob:  null,  // wird nur bei Einbetten befüllt
+      chapters:   getChaptersRobust(uint8),
+      pageMap:    scanOggTimestamps(uint8),
+      trackList:  meta['track-desc'] || meta.tracks || [],
+      metaPreview: summarizeMeta(meta)
+    };
+
+    log(`Import: ${file.name} (${Math.round(file.size / 1024)} KB)`, 'ok');
+    log(`Hash: ${normalizedHash}`, 'info');
+    if (series || episode || desc) log(`DB-Treffer: ${title}`, 'ok');
+    else log(`Kein DB-Treffer für ${file.name}`, 'warn');
+
+    return item;
+  }
+
+  /* ── Queue rendern ── */
   function renderQueue() {
     els.queue.innerHTML = '';
     if (!state.files.length) {
@@ -802,13 +624,17 @@
       updateMetrics();
       return;
     }
+    const placeholder = 'data:image/svg+xml;utf8,' + encodeURIComponent(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72"><rect width="100%" height="100%" rx="18" fill="#d9d4cb"/><path d="M22 48V24l28 12v12z" fill="#8f8a80"/></svg>'
+    );
     state.files.forEach(item => {
       const node = document.createElement('article');
       node.className = 'filecard';
-      const placeholder = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72"><rect width="100%" height="100%" rx="18" fill="#d9d4cb"/><path d="M22 48V24l28 12v12z" fill="#8f8a80"/></svg>');
-      const coverSrc = item.coverObjectUrl || item.coverUrl || placeholder;
+      // Cover: direkt per URL – kein CORS-Problem
+      const coverSrc = item.coverUrl || placeholder;
       node.innerHTML = `
-        <img class="cover" src="${coverSrc}" alt="Cover Vorschau" data-index="${item.index}">
+        <img class="cover" src="${coverSrc}" alt="Cover Vorschau"
+             onerror="this.src='${placeholder}'" crossorigin="">
         <div class="filemeta">
           <h4>${item.displayTitle || item.file.name}</h4>
           <p>${(item.meta?.series || 'Unbekannte Serie')} · ${item.format.toUpperCase()} · ${Math.round(item.file.size / 1024 / 1024 * 10) / 10} MB</p>
@@ -820,119 +646,17 @@
           <div style="color:var(--muted); font-size:.88rem">${item.status || 'Wartet'}</div>
         </div>
       `;
+      // Klick auf Card → Modal öffnen
       node.addEventListener('click', () => openModal(item));
       els.queue.appendChild(node);
     });
     updateMetrics();
   }
 
-  async function fetchToniesDb() {
-    if (state.dbLoaded) return;
-    try {
-      setDbStatus('Tonie-Datenbank wird geladen …');
-      log('Tonie-Datenbank wird geladen …');
-      const res = await fetch(TONIES_DB_URL, { cache: 'force-cache' });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const raw = await res.json();
-      state.toniesDb = normalizeDb(raw);
-      state.dbLoaded = true;
-      const count = Object.keys(state.toniesDb).length;
-      setDbStatus(`Tonie-Datenbank geladen: ${count} Hashes.`);
-      log(`Tonie-Datenbank geladen: ${count} Hashes.`, 'ok');
-      updateMetrics();
-    } catch (err) {
-      setDbStatus(`Tonie-Datenbank konnte nicht geladen werden: ${err.message}`);
-      log(`Tonie-Datenbank Fehler: ${err.message}`, 'bad');
-    }
-  }
-
-  async function ensureFfmpeg() {
-    if (state.ffmpegLoaded) return state.ffmpeg;
-  
-    setEngineStatus('FFmpeg.wasm wird geladen …');
-    log('FFmpeg.wasm wird geladen …');
-  
-    const ffmpeg = new FFmpeg();
-  
-    const baseURL = './assets/ffmpeg';
-  
-    const [coreURL, wasmURL, workerURL] = await Promise.all([
-      toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-      toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
-      toBlobURL(`${baseURL}/ffmpeg-core.worker.js`, 'text/javascript')
-    ]);
-  
-    await ffmpeg.load({
-      coreURL,
-      wasmURL,
-      workerURL,
-      classWorkerURL: `${baseURL}/worker.js`
-    });
-  
-    state.ffmpeg = ffmpeg;
-    state.ffmpegLoaded = true;
-    setEngineStatus('FFmpeg.wasm geladen und einsatzbereit.');
-    log('FFmpeg.wasm geladen und einsatzbereit.', 'ok');
-    return ffmpeg;
-  }
-
-  function applyDBMetaFallback(item) {
-    const meta = item.meta || {};
-    if (!item.coverUrl && meta.image) item.coverUrl = meta.image;
-    if (!item.displayTitle) {
-      const series = meta.series || '';
-      const episode = meta.episode || '';
-      item.displayTitle = series && episode ? `${series} - ${episode}` : (series || episode || item.file.name.replace(/\.taf$/i, ''));
-    }
-    item.tags = detectTags(item.displayTitle, meta.description || '', meta.genre || '');
-    item.metaPreview = summarizeMeta(meta);
-  }
-
-  async function enrichFile(file) {
-    const arrayBuffer = await file.arrayBuffer();
-    const uint8 = new Uint8Array(arrayBuffer);
-    const audioSlice = uint8.slice(HEADER_SIZE);
-    const hash = await sha1Hex(audioSlice);
-    const normalizedHash = hash.toLowerCase();
-    const meta = state.toniesDb[normalizedHash] || {};
-    const series = meta.series || '';
-    const episode = meta.episode || '';
-    const title = series && episode ? `${series} - ${episode}` : (series || episode || meta.title || file.name.replace(/\.taf$/i, ''));
-    const desc = meta.description || '';
-    const age = Number.parseInt(meta.age || 0, 10) || 0;
-    const genre = meta.genre || 'Hörspiel';
-    const tags = detectTags(title, desc, genre);
-    const coverUrl = meta.image || meta.pic || null;
-
-    const item = {
-      file,
-      buffer: uint8,
-      audioBuffer: audioSlice,
-      hash: normalizedHash,
-      meta: meta,
-      displayTitle: title,
-      status: 'Bereit',
-      progress: 0,
-      format: els.formatSelect.value,
-      tags,
-      coverUrl,
-      coverObjectUrl: null,
-      chapters: [],
-      pageMap: {},
-      trackList: meta['track-desc'] || meta.tracks || meta.trackList || [],
-      metaPreview: summarizeMeta(meta)
-    };
-
-    if (!Object.keys(meta).length) log(`Kein DB-Treffer für ${file.name}`, 'warn');
-    else log(`DB-Treffer: ${title}`, 'ok');
-
-    if (coverUrl) log('Cover-URL gefunden.', 'ok');
-    return item;
-  }
-
+  /* ── Dateien hinzufügen ── */
   async function addFiles(fileList) {
     await fetchToniesDb();
-    const tafs = [...fileList].filter(file => file.name.toLowerCase().endsWith('.taf'));
+    const tafs = [...fileList].filter(f => f.name.toLowerCase().endsWith('.taf'));
     if (!tafs.length) {
       setStatus('Keine TAF-Dateien gefunden.');
       log('Import abgebrochen: keine TAF-Dateien.', 'warn');
@@ -948,25 +672,26 @@
     log(`${state.files.length} Datei(en) für die Konvertierung bereit.`, 'ok');
   }
 
+  /* ── Konvertierung einer Datei ── */
   async function convertOne(item, index, total, zipFolder) {
     const ffmpeg = await ensureFfmpeg();
     item.status = `Verarbeite ${index + 1}/${total}`;
     item.progress = 5;
     renderQueue();
 
-    const title = item.displayTitle || item.file.name.replace(/\.taf$/i, '');
-    const meta = item.meta || {};
-    const series = meta.series || '';
-    const desc = meta.description || '';
-    const age = Number.parseInt(meta.age || 0, 10) || 0;
-    const genre = meta.genre || 'Hörspiel';
+    const title   = item.displayTitle || item.file.name.replace(/\.taf$/i, '');
+    const meta    = item.meta || {};
+    const series  = meta.series  || '';
+    const desc    = meta.description || '';
+    const age     = Number.parseInt(meta.age || 0, 10) || 0;
+    const genre   = meta.genre || 'Hörspiel';
     const fallbackArtist = els.artistFallback.value.trim() || 'Tonie';
-    const artist = series || fallbackArtist;
+    const artist  = series || fallbackArtist;
     const outputBase = cleanFilename(title);
-    const format = els.formatSelect.value;
-    item.format = format;
+    const format  = els.formatSelect.value;
+    item.format   = format;
     const outputName = `${outputBase}.${format}`;
-    const cueName = `${outputBase}.cue`;
+    const cueName    = `${outputBase}.cue`;
     const commentLimit = Math.max(0, Number(els.commentLimit.value || 0));
     const comment = `${age ? `Alter: ${age}+\n\n` : ''}${desc || ''}`.slice(0, commentLimit || undefined);
 
@@ -979,38 +704,46 @@
       item.status = 'OGG exportiert';
       log(`OGG exportiert: ${outputName}`, 'ok');
     } else {
-      const inputName = `input_${index}.ogg`;
-      const outputTmp = `output_${index}.${format}`;
-      const coverName = `cover_${index}.jpg`;
+      const inputName  = `input_${index}.ogg`;
+      const outputTmp  = `output_${index}.${format}`;
+      const coverName  = `cover_${index}.jpg`;
 
       await ffmpeg.writeFile(inputName, await fetchFile(new Blob([item.audioBuffer], { type: 'audio/ogg' })));
       item.progress = 18;
       renderQueue();
 
       const args = ['-i', inputName];
-      const embedCover = els.embedCover.checked && item.coverUrl && (format === 'mp3' || format === 'm4a');
 
-      if (embedCover) {
+      // Cover einbetten: erst per CORS versuchen, Fehler abfangen
+      let coverEmbedded = false;
+      if (els.embedCover.checked && item.coverUrl && (format === 'mp3' || format === 'm4a')) {
         try {
           const coverRes = await fetch(item.coverUrl, { mode: 'cors' });
           if (coverRes.ok) {
             const coverBlob = await coverRes.blob();
-            item.coverObjectUrl = URL.createObjectURL(coverBlob);
+            item.coverBlob = coverBlob;
             await ffmpeg.writeFile(coverName, await fetchFile(coverBlob));
             args.push('-i', coverName, '-map', '0:a', '-map', '1:v');
+            coverEmbedded = true;
             log('Cover wird eingebettet.', 'info');
           }
         } catch {
-          log('Cover konnte nicht per CORS geladen werden, wird nur angezeigt.', 'warn');
+          log('Cover kann nicht eingebettet werden (CORS), wird nur angezeigt.', 'warn');
         }
+      } else if (els.embedCover.checked && item.coverBlob && (format === 'mp3' || format === 'm4a')) {
+        // Fallback: schon gecachter Blob (z.B. aus vorherigem Lauf)
+        await ffmpeg.writeFile(coverName, await fetchFile(item.coverBlob));
+        args.push('-i', coverName, '-map', '0:a', '-map', '1:v');
+        coverEmbedded = true;
+        log('Cover wird eingebettet (aus Cache).', 'info');
       }
 
       if (format === 'mp3') {
         args.push('-c:a', 'libmp3lame', '-b:a', els.qualitySelect.value, '-id3v2_version', '3');
-        if (embedCover) args.push('-c:v', 'mjpeg', '-disposition:v', 'attached_pic');
+        if (coverEmbedded) args.push('-c:v', 'mjpeg', '-disposition:v', 'attached_pic');
       } else if (format === 'm4a') {
         args.push('-c:a', 'aac', '-b:a', els.qualitySelect.value);
-        if (embedCover) args.push('-c:v', 'mjpeg');
+        if (coverEmbedded) args.push('-c:v', 'mjpeg');
       }
 
       args.push(
@@ -1036,7 +769,9 @@
       }
 
       const outData = await ffmpeg.readFile(outputTmp);
-      zipFolder.file(outputName, new Blob([outData.buffer], { type: format === 'mp3' ? 'audio/mpeg' : 'audio/mp4' }));
+      zipFolder.file(outputName, new Blob([outData.buffer], {
+        type: format === 'mp3' ? 'audio/mpeg' : 'audio/mp4'
+      }));
 
       try { await ffmpeg.deleteFile(inputName); } catch {}
       try { await ffmpeg.deleteFile(outputTmp); } catch {}
@@ -1047,25 +782,22 @@
       log(`Export fertig: ${outputName}`, 'ok');
     }
 
-    if (els.createCovers.checked && item.coverUrl) {
-      zipFolder.file(`${outputBase}.jpg`, item.coverUrl);
+    // Cover separat in ZIP – als Blob (wenn geladen) oder URL-Referenz überspringen
+    if (els.createCovers.checked && item.coverBlob) {
+      zipFolder.file(`${outputBase}.jpg`, item.coverBlob);
     }
+
+    // CUE-Sheet
     if (item.chapters.length > 1) {
-      zipFolder.file(cueName, buildCue(title, outputName, item.chapters, item.pageMap, meta['track-desc'] || meta.tracks || []));
+      zipFolder.file(cueName, buildCue(title, outputName, item.chapters, item.pageMap,
+        item.trackList || meta['track-desc'] || meta.tracks || []));
       log(`Kapitel-CUE erzeugt: ${cueName}`, 'info');
     }
 
     const entry = buildKlangkisteEntry(
-      item.hash,
-      title,
-      outputName,
-      item.coverUrl ? `${outputBase}.jpg` : null,
-      desc,
-      age,
-      genre,
-      series,
-      meta.runtime || 0,
-      item.tags || []
+      item.hash, title, outputName,
+      item.coverBlob ? `${outputBase}.jpg` : null,
+      desc, age, genre, series, meta.runtime || 0, item.tags || []
     );
     state.generatedEntries.push(entry);
     state.converted += 1;
@@ -1073,13 +805,13 @@
     updateMetrics();
   }
 
+  /* ── Konvertierung starten ── */
   async function startConversion() {
     if (!state.files.length) {
       setStatus('Bitte zuerst mindestens eine TAF-Datei auswählen.');
       log('Konvertierung abgebrochen: keine Dateien ausgewählt.', 'warn');
       return;
     }
-
     els.convertBtn.disabled = true;
     state.abortRequested = false;
     state.converted = 0;
@@ -1088,7 +820,7 @@
     setStatus('Konvertierung läuft …');
     log('Konvertierung gestartet.', 'info');
 
-    const zip = new JSZip();
+    const zip    = new JSZip();
     const folder = zip.folder('klangkiste_output');
 
     try {
@@ -1106,117 +838,94 @@
           log('klangkiste.json erzeugt.', 'ok');
         }
         setStatus('ZIP wird erstellt …');
+        log('ZIP-Archiv wird erstellt …', 'info');
         const zipBlob = await zip.generateAsync({ type: 'blob' });
-        const url = URL.createObjectURL(zipBlob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'klangkiste-go-export.zip';
-        a.click();
-        setTimeout(() => URL.revokeObjectURL(url), 1500);
+        triggerDownload(zipBlob, 'klangkiste-go-export.zip');
         setStatus('Fertig. Download wurde vorbereitet.');
+        log('Download vorbereitet.', 'ok');
+      }
+    } catch (err) {
+      if (err.message !== 'aborted') {
+        setStatus(`Fehler: ${err.message}`);
+        log(`Fehler bei der Konvertierung: ${err.message}`, 'error');
       }
     } finally {
       els.convertBtn.disabled = false;
     }
   }
 
+  /* ── Nur JSON laden ── */
   function downloadJsonOnly() {
-    const entries = state.generatedEntries.length ? state.generatedEntries : state.files.map(item => {
-      const meta = item.meta || {};
-      const title = item.displayTitle || item.file.name.replace(/\.taf$/i, '');
-      const outputBase = cleanFilename(title);
-      const outputName = `${outputBase}.${els.formatSelect.value}`;
-      return buildKlangkisteEntry(
-        item.hash,
-        title,
-        outputName,
-        item.coverUrl ? `${outputBase}.jpg` : null,
-        meta.description || '',
-        Number.parseInt(meta.age || 0, 10) || 0,
-        meta.genre || 'Hörspiel',
-        meta.series || '',
-        meta.runtime || 0,
-        item.tags || []
-      );
-    });
+    const entries = state.generatedEntries.length
+      ? state.generatedEntries
+      : state.files.map(item => {
+          const meta  = item.meta || {};
+          const title = item.displayTitle || item.file.name.replace(/\.taf$/i, '');
+          const outputBase = cleanFilename(title);
+          return buildKlangkisteEntry(
+            item.hash, title, `${outputBase}.${item.format}`,
+            item.coverUrl ? `${outputBase}.jpg` : null,
+            meta.description || '', Number.parseInt(meta.age || 0, 10) || 0,
+            meta.genre || 'Hörspiel', meta.series || '', meta.runtime || 0, item.tags || []
+          );
+        });
     const blob = new Blob([JSON.stringify(entries, null, 4)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'klangkiste.json';
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1500);
-    log('Nur JSON wurde heruntergeladen.', 'info');
+    triggerDownload(blob, 'klangkiste.json');
   }
 
+  /* ── Demo ── */
+  async function loadDemo() {
+    log('Demo: synthetische TAF-Demo wird erzeugt …', 'info');
+    setStatus('Demo-Datei wird erzeugt …');
+    // Minimaler gültiger TAF-Header + leerer OGG-Stub (für Demo-Zwecke)
+    const header = new Uint8Array(HEADER_SIZE);
+    const ogg    = new Uint8Array([0x4F,0x67,0x67,0x53,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]);
+    const buf    = new Uint8Array(header.length + ogg.length);
+    buf.set(header, 0);
+    buf.set(ogg, header.length);
+    const demoFile = new File([buf], 'demo-tonie.taf', { type: 'application/octet-stream' });
+    await addFiles([demoFile]);
+    setStatus('Demo-Datei geladen.');
+  }
+
+  /* ── Warteschlange leeren ── */
   function clearQueue() {
-    state.files.forEach(item => item.coverObjectUrl && URL.revokeObjectURL(item.coverObjectUrl));
     state.files = [];
-    state.generatedEntries = [];
     state.converted = 0;
+    state.generatedEntries = [];
     renderQueue();
-    updateMetrics();
-    setStatus('Liste geleert.');
-    log('Liste geleert.', 'warn');
+    setStatus('Warteschlange geleert.');
+    log('Warteschlange geleert.', 'info');
   }
 
-  function loadDemo() {
-    state.files = [{
-      file: new File([new Uint8Array([0])], 'beispiel.taf'),
-      buffer: new Uint8Array(),
-      audioBuffer: new Uint8Array(),
-      hash: 'demo1234567890',
-      meta: { series: 'Demo-Serie', description: 'Beispielbeschreibung für Anzeige und Tags.', age: 4, genre: 'Hörspiel', runtime: 3120 },
-      displayTitle: 'Demo-Serie - Folge 1',
-      status: 'Demo',
-      progress: 100,
-      format: els.formatSelect.value,
-      tags: ['Abenteuer', 'Hörspiel'],
-      coverUrl: '',
-      coverObjectUrl: null,
-      chapters: [0],
-      pageMap: {},
-      trackList: ['Intro', 'Kapitel 1'],
-      metaPreview: 'Demo-Serie | Folge 1 | Beispielbeschreibung für Anzeige und Tags.'
-    }];
-    renderQueue();
-    updateMetrics();
-    setStatus('Demo-Eintrag geladen.');
-    log('Demo-Eintrag geladen.', 'ok');
-  }
-
-  function initTheme() {
-    const saved = localStorage.getItem('kg-theme');
-    if (saved) document.documentElement.setAttribute('data-theme', saved);
-    els.themeBtn.addEventListener('click', () => {
-      const current = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-      document.documentElement.setAttribute('data-theme', current);
-      localStorage.setItem('kg-theme', current);
-    });
-  }
-
-  function initDnD() {
-    const enter = e => { e.preventDefault(); els.dropzone.classList.add('drag'); };
-    const leave = e => { e.preventDefault(); els.dropzone.classList.remove('drag'); };
-    const drop = async e => {
-      e.preventDefault();
-      els.dropzone.classList.remove('drag');
-      await addFiles([...e.dataTransfer.files]);
-    };
-    ['dragenter', 'dragover'].forEach(type => els.dropzone.addEventListener(type, enter));
-    ['dragleave', 'dragend'].forEach(type => els.dropzone.addEventListener(type, leave));
-    els.dropzone.addEventListener('drop', drop);
-  }
-
+  /* ── Events binden ── */
   function bindEvents() {
+    // fileInput: nur über change-Event (nie direkt .click() aus async-Kontext)
     els.fileInput.addEventListener('change', async e => {
       await addFiles([...e.target.files]);
       e.target.value = '';
     });
-    els.dropzone.addEventListener('click', () => els.fileInput.click());
-    els.dropzone.addEventListener('keydown', e => {
-      if (e.key === 'Enter' || e.key === ' ') els.fileInput.click();
+
+    // Picker-Button: echter User-Click → fileInput.click() ist erlaubt
+    els.pickBtn.addEventListener('click', () => els.fileInput.click());
+
+    // Dropzone: Drag & Drop
+    els.dropzone.addEventListener('dragover', e => {
+      e.preventDefault();
+      els.dropzone.classList.add('drag-over');
     });
+    els.dropzone.addEventListener('dragleave', () => els.dropzone.classList.remove('drag-over'));
+    els.dropzone.addEventListener('drop', async e => {
+      e.preventDefault();
+      els.dropzone.classList.remove('drag-over');
+      await addFiles([...e.dataTransfer.files]);
+    });
+    // Dropzone-Klick: leitet zu pickBtn weiter → kein async-Context-Problem
+    els.dropzone.addEventListener('click', () => els.pickBtn.click());
+    els.dropzone.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') els.pickBtn.click();
+    });
+
     els.convertBtn.addEventListener('click', startConversion);
     els.stopBtn.addEventListener('click', () => {
       state.abortRequested = true;
@@ -1226,23 +935,21 @@
     els.downloadJsonBtn.addEventListener('click', downloadJsonOnly);
     els.demoBtn.addEventListener('click', loadDemo);
     els.clearBtn.addEventListener('click', clearQueue);
+
+    // Modal
     els.closeModalBtn.addEventListener('click', closeModal);
-    els.detailModal.addEventListener('click', e => { if (e.target === els.detailModal) closeModal(); });
+    els.detailModal.addEventListener('click', e => {
+      if (e.target === els.detailModal) closeModal();
+    });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') closeModal();
+    });
   }
 
-  async function init() {
-    initTheme();
-    initDnD();
-    bindEvents();
-    renderLogs();
-    renderQueue();
-    updateMetrics();
-    setStatus('Bereit. TAF-Dateien hinzufügen.');
-    log('App gestartet.', 'info');
-    await fetchToniesDb();
-  }
-
-  init();
+  /* ── Init ── */
+  bindEvents();
+  renderQueue();
+  updateMetrics();
 </script>
 </body>
 </html>
