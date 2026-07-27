@@ -1,48 +1,79 @@
 # TAF Klangkiste PRO
 
 [![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-live-success?logo=githubpages&logoColor=white)](https://basecore.github.io/taf-klangkiste/)
-[![Version](https://img.shields.io/badge/version-1.1.0-blue)](#versionierung)
+[![Version](https://img.shields.io/badge/version-1.2.0-blue)](#versionierung)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Workflow](https://github.com/basecore/taf-klangkiste/actions/workflows/convert-taf-release.yml/badge.svg)](https://github.com/basecore/taf-klangkiste/actions/workflows/convert-taf-release.yml)
 
 [🚀 App öffnen](https://basecore.github.io/taf-klangkiste/) · [📦 Repository](https://github.com/basecore/taf-klangkiste) · [🐛 Issues](https://github.com/basecore/taf-klangkiste/issues) · [⚙️ Actions](https://github.com/basecore/taf-klangkiste/actions)
 
-TAF Klangkiste PRO ist eine GitHub-Pages-WebApp, mit der du Toniebox-TAF-Dateien direkt im Browser analysieren, prüfen und für die Konvertierung vorbereiten kannst. Die App nutzt die Tonies-Datenbank für Cover, Metadaten und Tracklisten und zeigt Treffer mit Hash, Audio-ID, Größe und Confidence an. Die eigentliche Konvertierung kann anschließend entweder lokal im Browser oder – je nach Workflow – über GitHub Actions erfolgen.
+TAF Klangkiste PRO ist eine GitHub-Pages-WebApp, mit der du Toniebox-TAF-Dateien direkt im Browser analysieren, prüfen und konvertieren kannst. Die App liest die TAF-Datei lokal im Browser ein, vergleicht den Audio-Hash mit der Tonies-Datenbank, zeigt passende Metadaten an und kann die Audio-Daten anschließend im Browser exportieren.
+
+## App benutzen
+
+1. Öffne die App über den Link oben.
+2. Wähle eine oder mehrere `.taf`-Dateien aus oder ziehe sie per Drag & Drop in das Upload-Feld.
+3. Warte, bis die App die Datei analysiert und den passenden Tonie-Eintrag sucht.
+4. Prüfe Cover, Titel, Serie, Episode, Laufzeit, Trackliste und weitere Metadaten.
+5. Klicke auf das Cover, um die vollständige Detailansicht zu öffnen.
+6. Bestätige unklare Treffer manuell, bevor du Metadaten übernimmst.
+7. Wähle Ausgabeformat, Bitrate und gewünschte Optionen.
+8. Starte die Konvertierung oder lade nur die JSON-Daten herunter.
+
+## Was die App macht
+
+Die App arbeitet vollständig im Browser und nutzt dabei lokale Dateidaten, die Tonies-Datenbank und optional FFmpeg.wasm für den Export. Beim Einlesen wird die TAF-Datei ab dem Audio-Bereich untersucht, damit Hash, Audio-ID und Dateigröße mit den DB-Einträgen abgeglichen werden können. Danach werden Cover, Trackliste und weitere Metadaten in der Vorschau angezeigt.
 
 ## Features
 
 - Upload per Klick oder Drag & Drop.
-- Automatische Metadaten-Erkennung über die Tonies-Datenbank.
+- Lokale Analyse der TAF-Datei im Browser.
+- Hash-Prüfung des Audio-Teils ab Header-Ende.
+- Vergleich mit Tonies-DB über Hash, Audio-ID und Größe.
 - Anzeige von Titel, Serie, Episode, Beschreibung, Alter, Sprache, Kategorie, Laufzeit und Trackliste.
 - Cover-Vorschau direkt aus der Tonies-Datenbank.
-- Detailansicht durch Klick auf das Cover mit allen verfügbaren Metadaten.
-- Hash- und Audio-ID-gestützte Trefferprüfung mit Größenvergleich.
-- Warnung bei unklaren Treffern, damit keine falschen Metadaten übernommen werden.
+- Detailansicht beim Klick auf das Cover.
+- Warnung bei unklaren Treffern.
 - MP3-/M4A-Export mit eingebettetem Cover, sofern möglich.
 - OGG-Durchreichen als Schnellexport.
 - Optionale Erstellung von `klangkiste.json`.
-- Smartphone-taugliche Oberfläche mit schmalem Layout.
+- Smartphone-taugliche Oberfläche.
 
-## Aktueller Workflow
+## Datenquellen und Zugriff
 
-Der aktuelle Workflow ist schlanker als früher:
+Die App greift im Wesentlichen auf drei Dinge zu:
 
-1. TAF-Dateien direkt in der WebApp laden.
-2. Die App liest Hash, Header-Infos und Tonies-Metadaten aus.
-3. Der passende DB-Treffer wird angezeigt, inklusive Cover und Detailinfos.
-4. Du bestätigst unklare Treffer manuell, damit keine falschen Covers oder Metadaten übernommen werden.
-5. Anschließend konvertierst du direkt im Browser oder exportierst die Daten für deinen weiteren Workflow.
+1. **Lokale TAF-Datei**: Die Datei wird direkt im Browser gelesen. Die App extrahiert daraus den Audio-Teil, berechnet den SHA-1-Hash und versucht, Header-Informationen auszulesen.
+2. **Tonies-Datenbank**: Die WebApp lädt die Tonies-DB aus dem öffentlichen Repository `toniebox-reverse-engineering/tonies-json`. Dort werden Hash, Audio-ID, Größe, Tracks, Cover-URL, Web-Link und weitere Metadaten gesucht.
+3. **FFmpeg.wasm**: Für die Konvertierung wird der Audio-Inhalt im Browser verarbeitet. Bei MP3 und M4A kann zusätzlich ein Cover eingebettet werden, wenn die Bildquelle verfügbar ist.
 
-## So benutzt du die App
+## So wird der Tonie gefunden
 
-1. Öffne die App über den Link oben.
-2. Wähle eine `.taf`-Datei aus oder ziehe sie in das Upload-Feld.
-3. Prüfe den DB-Treffer in der Vorschau.
-4. Klicke auf das Cover, um alle verfügbaren Tonie-Infos zu sehen.
-5. Bestätige unklare Treffer manuell, wenn Titel oder Metadaten nur ungefähr passen.
-6. Wähle Ausgabeformat, Bitrate und die gewünschten Optionen.
-7. Starte die Konvertierung oder lade nur JSON herunter.
-8. Bei mehreren Dateien kannst du den Export als ZIP vorbereiten.
+Die App versucht den Treffer schrittweise zu bestimmen:
+
+1. Zuerst wird der SHA-1-Hash des Audio-Bereichs der TAF-Datei berechnet.
+2. Dieser Hash wird in der Tonies-Datenbank nachgeschlagen.
+3. Wenn kein exakter Treffer vorhanden ist, werden weitere Hinweise geprüft, zum Beispiel die `audio-id` und die Dateigröße.
+4. Wenn mehrere Kandidaten ähnlich wirken, wird der Treffer als unsicher markiert.
+5. Unsichere Treffer müssen manuell bestätigt werden, damit keine falschen Cover oder Metadaten übernommen werden.
+
+Dieses Verhalten ist wichtig, weil die Tonies-Datenbank teils alternative Inhalte oder verschiedene Varianten eines Titels enthält.
+
+## Detailansicht
+
+Wenn du auf das Cover in der Vorschau klickst, öffnet sich eine Detailansicht mit allen verfügbaren Informationen aus der Tonies-Datenbank. Dazu gehören unter anderem:
+
+- Serie.
+- Episode.
+- Dauer.
+- Altersempfehlung.
+- Sprache.
+- Kategorie.
+- Hash.
+- Audio-ID.
+- Dateigröße.
+- Trackliste.
+- Web-Link zum Tonies-Eintrag.
 
 ## Unterstützte Ausgabeformate
 
@@ -51,10 +82,6 @@ Der aktuelle Workflow ist schlanker als früher:
 - OGG.
 
 MP3 und M4A können mit Cover-Art versehen werden, wenn die Quelle verfügbar ist und der Browserzugriff das zulässt. OGG wird direkt übernommen und ist besonders praktisch als schneller Zwischenschritt.
-
-## Cover und Metadaten
-
-Die App versucht zuerst, das Cover direkt aus der Tonies-Datenbank zu laden. Wenn das externe Bild keine CORS-Freigabe hat, wird es weiterhin in der Vorschau angezeigt, aber für das Einbetten kann es je nach Browser und Quelle Einschränkungen geben. Per Klick auf das Cover öffnet sich eine Detailansicht mit Serie, Episode, Dauer, Alter, Sprache, Kategorie, Hash, Audio-ID, Größe und Trackliste.
 
 ## Für Smartphones
 
@@ -72,8 +99,7 @@ Beachte aber:
 - JavaScript für die Bedienoberfläche.
 - Tonies-Datenbank für Metadaten, Cover und Tracklisten.
 - FFmpeg.wasm für die Browser-Konvertierung.
-- Optional GitHub Actions für einen ergänzenden Release- oder Export-Workflow.
-- GitHub Release Assets für alternative Verteilungswege.
+- Optional GitHub Actions für ergänzende Workflows.
 
 ## Konvertierungslogik
 
@@ -83,9 +109,36 @@ Die App sucht zuerst nach einem exakten Hash-Treffer. Wenn der Hash nicht passt,
 
 Die Tonies-Datenbank enthält teils alternative Inhalte und unterschiedliche Varianten eines Titels. Ein passender Name allein reicht deshalb nicht aus, um sicher zu sein, dass wirklich der richtige Tonie geladen wurde.
 
+## Aktueller Workflow
+
+1. TAF-Datei in die WebApp laden.
+2. Die App liest den Audio-Teil, berechnet den Hash und sucht in der Tonies-DB.
+3. Passende Metadaten und Cover werden angezeigt.
+4. Die Detailansicht zeigt alle verfügbaren Tonie-Infos.
+5. Unklare Treffer werden manuell bestätigt.
+6. Danach wird exportiert oder nur eine JSON-Datei erzeugt.
+
+## Projektstruktur
+
+```text
+/
+├── index.html
+├── assets/
+│   └── ffmpeg/
+│       ├── ffmpeg-core.js
+│       ├── ffmpeg-core.wasm
+│       ├── ffmpeg-core.worker.js
+│       ├── worker.js
+│       ├── const.js
+│       └── errors.js
+├── README.md
+├── LICENSE
+└── .nojekyll
+```
+
 ## GitHub Pages Setup
 
-Diese App kann aus dem Ordner `docs/` veröffentlicht werden.
+Diese App wird direkt aus dem Repository-Root veröffentlicht.
 
 So aktivierst du sie:
 
@@ -93,43 +146,26 @@ So aktivierst du sie:
 2. Gehe zu `Pages`.
 3. Wähle als Quelle `Deploy from a branch`.
 4. Branch: `main`.
-5. Ordner: `/docs`.
+5. Ordner: `/ (root)`.
 6. Speichern und kurz warten.
-
-## Projektstruktur
-
-```text
-docs/
-├── index.html
-├── style.css
-├── app.js
-└── .nojekyll
-
-.github/
-└── workflows/
-    └── convert-taf-release.yml
-
-release-payloads/
-├── latest.release.json
-└── .gitkeep
-```
 
 ## Versionierung
 
-Aktuelle Version: `1.1.0`
+Aktuelle Version: `1.2.0`
 
 ### Changelog
 
+- `1.2.0` – Root-Workflow dokumentiert, Browser-Analyse erklärt, Datenzugriffe beschrieben und Detailansicht/Bestätigungslogik hervorgehoben.
 - `1.1.0` – Browser-Workflow überarbeitet: Cover-Vorschau, Detailansicht, Hash-/Audio-ID-Prüfung, manuelle Bestätigung unklarer Treffer und optionaler Browser-Export.
 - `1.0.0` – Erste Release-Variante mit GitHub-Pages-Frontend, Metadaten-Lookup, Payload-Export und GitHub-Actions-Konvertierung.
 
 ## Hinweise
 
-- Die App kann Metadaten und Cover direkt anzeigen, auch wenn der Download des Covers für die Einbettung wegen CORS eingeschränkt ist.
+- Metadaten und Cover können direkt angezeigt werden, auch wenn das Einbetten wegen CORS eingeschränkt sein kann.
 - Der Dateidialog muss immer durch eine direkte Benutzeraktion ausgelöst werden.
 - Unklare Treffer solltest du bestätigen, bevor du Metadaten übernimmst.
 - Wenn du den Export über GitHub Actions nutzt, bleibt der Browser-Schritt nur die Vorbereitung und Prüfung.
-- Für die finale MP3 brauchst du ein passendes Cover und einen eindeutigen Datenbanktreffer.
+- Für die finale MP3 brauchst du einen eindeutigen Datenbanktreffer und idealerweise ein passendes Cover.
 
 ## Lizenz
 
