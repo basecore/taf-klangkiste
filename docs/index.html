@@ -529,7 +529,7 @@
         updateMetrics();
         return;
       }
-      state.files.forEach((item, idx) => {
+      state.files.forEach((item) => {
         const node = document.createElement('article');
         node.className = 'file-card';
         const coverSrc = item.coverObjectUrl || '';
@@ -561,7 +561,7 @@
       const meta = state.toniesDb[hash] || {};
       const series = meta.series || '';
       const episode = meta.episode || '';
-      let title = series && episode ? `${series} - ${episode}` : (series || episode || meta.title || file.name.replace(/\.taf$/i, ''));
+      const title = series && episode ? `${series} - ${episode}` : (series || episode || meta.title || file.name.replace(/\.taf$/i, ''));
       const finalDesc = meta.description || '';
       const finalAge = Number.parseInt(meta.age || 0, 10) || 0;
       const finalGenre = meta.genre || 'Hörspiel';
