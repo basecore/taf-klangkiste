@@ -943,8 +943,9 @@
       const arrayBuffer = await file.arrayBuffer();
       const uint8 = new Uint8Array(arrayBuffer);
       const audioSlice = uint8.slice(HEADER_SIZE);
-      const hash = await sha1Hex(audioSlice.buffer);
-      const meta = state.toniesDb[hash] || {};
+      const hash = await sha1Hex(audioSlice);
+      const normalizedHash = hash.toLowerCase();
+      const meta = state.toniesDb[normalizedHash] || {};
       const series = meta.series || '';
       const episode = meta.episode || '';
       const title = series && episode ? `${series} - ${episode}` : (series || episode || meta.title || file.name.replace(/\.taf$/i, ''));
@@ -957,7 +958,7 @@
         file,
         buffer: uint8,
         audioBuffer: audioSlice,
-        hash,
+        hash: normalizedHash,
         meta,
         displayTitle: title,
         status: 'Bereit',
@@ -972,12 +973,12 @@
         trackList: meta.tracks || meta['track-desc'] || meta.trackList || [],
         metaPreview: summarizeMeta(meta)
       };
-
+    
       log(`Import: ${file.name} (${Math.round(file.size / 1024)} KB)`, 'ok');
-      log(`Hash: ${hash}`, 'info');
-      if (series || episode || desc) log(`DB-Treffer: ${title}`, 'ok');
+      log(`Hash: ${normalizedHash}`, 'info');
+      if (meta && Object.keys(meta).length) log(`DB-Treffer: ${title}`, 'ok');
       else log(`Kein DB-Treffer für ${file.name}`, 'warn');
-
+    
       if (coverUrl) {
         log('Cover-URL gefunden, lade Vorschau …', 'info');
         const blob = await fetchCoverBlob(coverUrl);
@@ -991,7 +992,7 @@
       }
       return item;
     }
-
+    
     async function addFiles(fileList) {
       await fetchToniesDb();
       const tafs = [...fileList].filter(file => file.name.toLowerCase().endsWith('.taf'));
