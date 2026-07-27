@@ -109,14 +109,6 @@
       backdrop-filter: blur(20px) saturate(150%);
     }
     .hero-main{padding:18px; overflow:hidden; position:relative;}
-    .badge{
-      display:inline-flex; align-items:center; gap:8px;
-      border-radius:999px; padding:7px 12px;
-      background:color-mix(in srgb, var(--brand) 12%, transparent);
-      color:var(--brand);
-      font-weight:700; letter-spacing:.03em;
-      font-size:.78rem; text-transform:uppercase;
-    }
     .hero-main h2{
       margin:14px 0 10px;
       font-family:var(--font2);
@@ -125,20 +117,6 @@
       letter-spacing:-.04em;
     }
     .hero-main p{margin:0; color:var(--muted); max-width:64ch; font-size:1rem;}
-    .hero-pills{
-      display:grid;
-      grid-template-columns:repeat(2, minmax(0,1fr));
-      gap:10px;
-      margin-top:16px;
-    }
-    .pill{
-      padding:12px 14px;
-      border-radius:18px;
-      background:var(--card2);
-      border:1px solid var(--stroke);
-      font-weight:700;
-      box-shadow:var(--shadow2);
-    }
     .hero-side{padding:18px; display:grid; gap:12px; align-content:start;}
     .metric{
       background:var(--card2);
@@ -427,7 +405,6 @@
       padding-left:18px;
     }
     .modal-list li{margin:4px 0; color:var(--text);}
-    /* Fallback confirm modal */
     .confirm-modal{
       width:min(520px,100%);
       max-height:min(80vh,680px);
@@ -462,7 +439,6 @@
       .brandbox{align-items:flex-start}
       .logo{width:44px;height:44px;border-radius:14px}
       .hero-main h2{font-size:clamp(1.8rem, 10vw, 2.7rem)}
-      .hero-pills{grid-template-columns:1fr}
       .settings,.actions{grid-template-columns:1fr}
       .filecard{grid-template-columns:64px 1fr}
       .cover{width:64px;height:64px;border-radius:16px}
@@ -502,12 +478,6 @@
       <span class="badge">Browser-Converter · mobil optimiert</span>
       <h2>TAF-Dateien direkt im Browser konvertieren.</h2>
       <p>Mit Tonie-DB, Cover-Vorschau, Detailansicht, Log-Fenster und ZIP-Export – ohne Server-Upload und passend für GitHub Pages.</p>
-      <div class="hero-pills">
-        <div class="pill">MP3 / M4A / OGG</div>
-        <div class="pill">Cover & Kapitel-CUE</div>
-        <div class="pill">klangkiste.json optional</div>
-        <div class="pill">Smartphone-UI</div>
-      </div>
     </article>
     <aside class="card hero-side">
       <div class="metric"><strong id="metricFiles">0</strong><span>Dateien in der Warteschlange</span></div>
@@ -518,7 +488,7 @@
 
   <section class="grid">
     <article class="card panel">
-      <h3>Import &amp; Einstellungen</h3>
+      <h3>Import & Einstellungen</h3>
 
       <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="TAF Dateien auswählen oder hineinziehen">
         <strong>TAF-Dateien hier ablegen</strong>
@@ -565,7 +535,6 @@
       <div class="actions">
         <button class="btn btn-primary" id="convertBtn" type="button">Konvertierung starten</button>
         <button class="btn btn-secondary" id="downloadJsonBtn" type="button" style="display:none">Nur JSON laden</button>
-        <button class="btn btn-secondary" id="demoBtn" type="button">Demo laden</button>
         <button class="btn btn-danger" id="stopBtn" type="button">Stopp</button>
         <button class="btn btn-danger" id="clearBtn" type="button">Liste leeren</button>
       </div>
@@ -603,7 +572,6 @@
   </footer>
 </main>
 
-<!-- Detail Modal -->
 <div class="modal-backdrop" id="detailModal">
   <div class="modal">
     <div class="modal-head">
@@ -626,7 +594,6 @@
   </div>
 </div>
 
-<!-- Fallback Confirm Modal -->
 <div class="modal-backdrop" id="confirmModal">
   <div class="confirm-modal">
     <div class="modal-head">
@@ -647,9 +614,7 @@
   import JSZip from 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm';
 
   const APP_VERSION = '1.1.0';
-  const APP_DATE    = new Date().toLocaleDateString('de-DE', { day:'2-digit', month:'2-digit', year:'numeric' });
-
-  const FFMPEG_BASE = './assets/ffmpeg';
+  const APP_DATE = new Date().toLocaleDateString('de-DE', { day:'2-digit', month:'2-digit', year:'numeric' });
   const HEADER_SIZE = 4096;
   const OPUS_SAMPLE_RATE = 48000;
   const TONIES_DB_URL = 'https://raw.githubusercontent.com/toniebox-reverse-engineering/tonies-json/release/toniesV2.json';
@@ -686,7 +651,6 @@
     convertBtn: document.getElementById('convertBtn'),
     stopBtn: document.getElementById('stopBtn'),
     downloadJsonBtn: document.getElementById('downloadJsonBtn'),
-    demoBtn: document.getElementById('demoBtn'),
     clearBtn: document.getElementById('clearBtn'),
     statusText: document.getElementById('statusText'),
     engineStatus: document.getElementById('engineStatus'),
@@ -711,18 +675,15 @@
     footerDate: document.getElementById('footerDate')
   };
 
-  // ── Footer meta ────────────────────────────────────────────────
   function initFooterMeta() {
     els.footerVersion.textContent = APP_VERSION;
     els.footerDate.textContent = APP_DATE;
   }
 
-  // ── JSON-button visibility ─────────────────────────────────────
   function updateJsonBtnVisibility() {
     els.downloadJsonBtn.style.display = els.createJson.checked ? '' : 'none';
   }
 
-  // ── Logging ────────────────────────────────────────────────────
   function log(message, type='info') {
     const item = { message, type, time: new Date().toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit', second:'2-digit' }) };
     state.logs.unshift(item);
@@ -748,11 +709,7 @@
   function setStatus(text) { els.statusText.textContent = text; }
   function setDbStatus(text) { els.dbStatus.textContent = text; }
   function setEngineStatus(text) { els.engineStatus.textContent = text; }
-
-  function cleanFilename(name) {
-    return (name || '').replace(/[^\w .\-()äöüÄÖÜß]/g, '_').trim() || 'unbekannt';
-  }
-
+  function cleanFilename(name) { return (name || '').replace(/[^\w .\-()äöüÄÖÜß]/g, '_').trim() || 'unbekannt'; }
   function todayString() {
     const d = new Date();
     return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
@@ -857,7 +814,6 @@
     };
   }
 
-  // ── Fallback DB search ─────────────────────────────────────────
   function findFallbackCandidates(file) {
     const sizeBytes = file.size;
     const baseName = file.name.replace(/\.taf$/i, '').toLowerCase().trim();
@@ -866,12 +822,10 @@
       const series = (entry.series || entry.title || '').toLowerCase();
       const episode = (entry.episode || '').toLowerCase();
       const combined = `${series} ${episode}`;
-      // Name similarity (word overlap)
       const nameWords = baseName.split(/[\s_\-]+/).filter(Boolean);
       for (const w of nameWords) {
         if (w.length > 2 && combined.includes(w)) score += 3;
       }
-      // Size proximity (within 20%)
       if (entry.size && sizeBytes > 0) {
         const entrySize = Number(entry.size);
         if (!isNaN(entrySize) && entrySize > 0) {
@@ -883,11 +837,7 @@
       }
       return { entry, score };
     });
-    return scored
-      .filter(x => x.score > 0)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 5)
-      .map(x => x.entry);
+    return scored.filter(x => x.score > 0).sort((a, b) => b.score - a.score).slice(0, 5).map(x => x.entry);
   }
 
   function showConfirmModal(file, candidates) {
@@ -951,10 +901,7 @@
     els.detailModal.style.display = 'flex';
   }
 
-  function closeModal() {
-    els.detailModal.style.display = 'none';
-    state.modalItem = null;
-  }
+  function closeModal() { els.detailModal.style.display = 'none'; state.modalItem = null; }
 
   function renderQueue() {
     els.queue.innerHTML = '';
@@ -970,7 +917,7 @@
       const coverSrc = item.coverObjectUrl || item.coverUrl || placeholder;
       const fallbackTag = item.isFallback ? '<span class="tag fallback">⚠ Fallback</span>' : '';
       node.innerHTML = `
-        <img class="cover" src="${coverSrc}" alt="Cover Vorschau" data-index="${item.index}">
+        <img class="cover" src="${coverSrc}" alt="Cover Vorschau">
         <div class="filemeta">
           <h4>${item.displayTitle || item.file.name}</h4>
           <p>${(item.meta?.series || 'Unbekannte Serie')} · ${item.format.toUpperCase()} · ${Math.round(item.file.size / 1024 / 1024 * 10) / 10} MB</p>
@@ -1029,16 +976,55 @@
     return ffmpeg;
   }
 
-  function applyDBMetaFallback(item) {
-    const meta = item.meta || {};
-    if (!item.coverUrl && meta.image) item.coverUrl = meta.image;
-    if (!item.displayTitle) {
-      const series = meta.series || '';
-      const episode = meta.episode || '';
-      item.displayTitle = series && episode ? `${series} - ${episode}` : (series || episode || item.file.name.replace(/\.taf$/i, ''));
+  async function getChaptersRobustFromTaf(uint8) {
+    const best = [];
+    for (let i = 0; i < Math.max(0, HEADER_SIZE - 2); i++) {
+      if (uint8[i] !== 0x22) continue;
+      try {
+        const length = uint8[i + 1];
+        const start = i + 2;
+        const end = start + length;
+        if (end > uint8.length) continue;
+        const temp = [];
+        let curr = start;
+        while (curr < end) {
+          let value = 0, shift = 0;
+          while (true) {
+            if (curr >= uint8.length) throw new Error('EOF');
+            const byte = uint8[curr++];
+            value |= (byte & 0x7f) << shift;
+            if (!(byte & 0x80)) break;
+            shift += 7;
+          }
+          temp.push(value);
+        }
+        if (temp.length > best.length && temp.every((v, idx, arr) => idx === 0 || arr[idx - 1] <= v)) {
+          best.splice(0, best.length, ...temp);
+        }
+      } catch {}
     }
-    item.tags = detectTags(item.displayTitle, meta.description || '', meta.genre || '');
-    item.metaPreview = summarizeMeta(meta);
+    return [...new Set([0, ...best])].sort((a, b) => a - b);
+  }
+
+  function scanOggTimestampsFromTaf(uint8) {
+    const pageMap = {};
+    let pos = HEADER_SIZE;
+    while (pos < uint8.length) {
+      const sig = String.fromCharCode(uint8[pos], uint8[pos + 1], uint8[pos + 2], uint8[pos + 3]);
+      if (sig !== 'OggS') {
+        pos += 1;
+        continue;
+      }
+      if (pos + 27 > uint8.length) break;
+      const view = new DataView(uint8.buffer, uint8.byteOffset + pos, uint8.byteLength - pos);
+      const granule = view.getBigUint64(6, true);
+      const pageSegments = view.getUint8(26);
+      let segSum = 0;
+      for (let i = 0; i < pageSegments; i++) segSum += view.getUint8(27 + i);
+      pageMap[Number(granule)] = Number(granule);
+      pos += 27 + pageSegments + segSum;
+    }
+    return pageMap;
   }
 
   async function enrichFile(file) {
@@ -1054,10 +1040,7 @@
       log(`Kein Hash-Treffer für ${file.name} – suche Fallback …`, 'warn');
       const candidates = findFallbackCandidates(file);
       const result = await showConfirmModal(file, candidates);
-      if (result === 'skip') {
-        log(`${file.name} wird übersprungen.`, 'warn');
-        return null;
-      }
+      if (result === 'skip') return null;
       if (result && result !== null) {
         meta = result;
         isFallback = true;
@@ -1082,7 +1065,7 @@
       buffer: uint8,
       audioBuffer: audioSlice,
       hash: normalizedHash,
-      meta: meta,
+      meta,
       displayTitle: title,
       status: 'Bereit',
       progress: 0,
@@ -1090,8 +1073,8 @@
       tags,
       coverUrl,
       coverObjectUrl: null,
-      chapters: [],
-      pageMap: {},
+      chapters: await getChaptersRobustFromTaf(uint8),
+      pageMap: scanOggTimestampsFromTaf(uint8),
       trackList: meta['track-desc'] || meta.tracks || meta.trackList || [],
       metaPreview: summarizeMeta(meta),
       isFallback
@@ -1113,7 +1096,7 @@
     setStatus('Dateien werden analysiert …');
     for (const file of tafs) {
       const item = await enrichFile(file);
-      if (item === null) continue; // user skipped
+      if (item === null) continue;
       state.files.push(item);
       renderQueue();
     }
@@ -1218,10 +1201,7 @@
 
       await ffmpeg.exec(args);
 
-      if (state.abortRequested) {
-        log('Konvertierung wurde abgebrochen.', 'warn');
-        throw new Error('aborted');
-      }
+      if (state.abortRequested) throw new Error('aborted');
 
       const outData = await ffmpeg.readFile(outputTmp);
       zipFolder.file(outputName, new Blob([outData.buffer], { type: format === 'mp3' ? 'audio/mpeg' : 'audio/mp4' }));
@@ -1235,7 +1215,6 @@
       log(`Export fertig: ${outputName}`, 'ok');
     }
 
-    // Cover separat speichern
     if (els.createCovers.checked && item.coverUrl) {
       try {
         const coverRes = await fetch(item.coverUrl, { mode: 'cors' });
@@ -1243,16 +1222,12 @@
           const coverBlob = await coverRes.blob();
           zipFolder.file(`${outputBase}.jpg`, coverBlob);
         }
-      } catch {
-        zipFolder.file(`${outputBase}.jpg`, item.coverUrl);
-      }
+      } catch {}
     }
 
-    // CUE immer erzeugen (mindestens 1 Eintrag)
     const chapters = item.chapters.length ? item.chapters : [0];
     const trackList = meta['track-desc'] || meta.tracks || item.trackList || [];
-    const cueContent = buildCue(title, outputName, chapters, item.pageMap, trackList, dateStr);
-    zipFolder.file(cueName, cueContent);
+    zipFolder.file(cueName, buildCue(title, outputName, chapters, item.pageMap, trackList, dateStr));
     log(`CUE erzeugt: ${cueName}`, 'info');
 
     const entry = buildKlangkisteEntry(
@@ -1358,32 +1333,6 @@
     log('Liste geleert.', 'warn');
   }
 
-  function loadDemo() {
-    state.files = [{
-      file: new File([new Uint8Array([0])], 'beispiel.taf'),
-      buffer: new Uint8Array(),
-      audioBuffer: new Uint8Array(),
-      hash: 'demo1234567890',
-      meta: { series: 'Demo-Serie', description: 'Beispielbeschreibung für Anzeige und Tags.', age: 4, genre: 'Hörspiel', runtime: 3120 },
-      displayTitle: 'Demo-Serie - Folge 1',
-      status: 'Demo',
-      progress: 100,
-      format: els.formatSelect.value,
-      tags: ['Abenteuer', 'Hörspiel'],
-      coverUrl: '',
-      coverObjectUrl: null,
-      chapters: [0],
-      pageMap: {},
-      trackList: ['Intro', 'Kapitel 1'],
-      metaPreview: 'Demo-Serie | Folge 1 | Beispielbeschreibung für Anzeige und Tags.',
-      isFallback: false
-    }];
-    renderQueue();
-    updateMetrics();
-    setStatus('Demo-Eintrag geladen.');
-    log('Demo-Eintrag geladen.', 'ok');
-  }
-
   function initTheme() {
     const saved = localStorage.getItem('kg-theme');
     if (saved) document.documentElement.setAttribute('data-theme', saved);
@@ -1423,11 +1372,9 @@
       log('Abbruch angefordert.', 'warn');
     });
     els.downloadJsonBtn.addEventListener('click', downloadJsonOnly);
-    els.demoBtn.addEventListener('click', loadDemo);
     els.clearBtn.addEventListener('click', clearQueue);
     els.closeModalBtn.addEventListener('click', closeModal);
     els.detailModal.addEventListener('click', e => { if (e.target === els.detailModal) closeModal(); });
-    // JSON button visibility follows checkbox
     els.createJson.addEventListener('change', updateJsonBtnVisibility);
   }
 
