@@ -1354,13 +1354,78 @@
   }
 
   function initDnD() {
-    const enter = e => { e.preventDefault(); els.dropzone.classList.add('drag'); };
-    const leave = e => { e.preventDefault(); els.dropzone.classList.remove('drag'); };
+    const enter = e => {
+      e.preventDefault();
+      els.dropzone.classList.add('drag');
+    };
+
+    const leave = e => {
+      e.preventDefault();
+      els.dropzone.classList.remove('drag');
+    };
+
     const drop = async e => {
       e.preventDefault();
       els.dropzone.classList.remove('drag');
       await addFiles([...e.dataTransfer.files]);
     };
+
     ['dragenter', 'dragover'].forEach(type => els.dropzone.addEventListener(type, enter));
     ['dragleave', 'dragend'].forEach(type => els.dropzone.addEventListener(type, leave));
-    els
+    els.dropzone.addEventListener('drop', drop);
+  }
+
+  function bindEvents() {
+    els.fileInput.addEventListener('change', async e => {
+      await addFiles([...e.target.files]);
+      e.target.value = '';
+    });
+
+    els.convertBtn.addEventListener('click', startConversion);
+
+    els.stopBtn.addEventListener('click', () => {
+      state.abortRequested = true;
+      setStatus('Abbruch angefordert …');
+      log('Abbruch angefordert.', 'warn');
+    });
+
+    els.downloadJsonBtn.addEventListener('click', downloadJsonOnly);
+    els.clearBtn.addEventListener('click', clearQueue);
+    els.closeModalBtn.addEventListener('click', closeModal);
+
+    els.detailModal.addEventListener('click', e => {
+      if (e.target === els.detailModal) closeModal();
+    });
+
+    els.createJson.addEventListener('change', updateJsonBtnVisibility);
+  }
+
+  function initTheme() {
+    const saved = localStorage.getItem('kg-theme');
+    if (saved) document.documentElement.setAttribute('data-theme', saved);
+
+    els.themeBtn.addEventListener('click', () => {
+      const current = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', current);
+      localStorage.setItem('kg-theme', current);
+    });
+  }
+
+  async function init() {
+    initTheme();
+    initDnD();
+    bindEvents();
+    initFooterMeta();
+    updateJsonBtnVisibility();
+    renderLogs();
+    renderQueue();
+    updateMetrics();
+    setStatus('Bereit. TAF-Dateien hinzufügen.');
+    log('App gestartet.', 'info');
+    await fetchToniesDb();
+  }
+
+  init();
+</script>
+</body>
+</html>
