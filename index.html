@@ -486,7 +486,6 @@
   <section class="grid">
     <article class="card panel">
       <h3>Import & Einstellungen</h3>
-
       <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="TAF Dateien auswählen oder hineinziehen">
         <strong>TAF-Dateien hier ablegen</strong>
         <p>oder unten antippen, um Dateien auszuwählen.</p>
@@ -533,7 +532,6 @@
         <button class="btn btn-primary" id="convertBtn" type="button">Konvertierung starten</button>
         <button class="btn btn-secondary" id="downloadJsonBtn" type="button" style="display:none">Nur JSON laden</button>
         <button class="btn btn-danger" id="stopBtn" type="button">Stopp</button>
-        <button class="btn btn-danger" id="clearBtn" type="button">Liste leeren</button>
       </div>
 
       <div class="statusbox">
@@ -610,7 +608,7 @@
   import { fetchFile, toBlobURL } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js';
   import JSZip from 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm';
 
-  const APP_VERSION = '1.2.0';
+  const APP_VERSION = '1.4.0';
   const APP_DATE = new Date().toLocaleDateString('de-DE', { day:'2-digit', month:'2-digit', year:'numeric' });
   const HEADER_SIZE = 4096;
   const OPUS_SAMPLE_RATE = 48000;
@@ -626,8 +624,7 @@
     converted: 0,
     generatedEntries: [],
     logs: [],
-    abortRequested: false,
-    modalItem: null
+    abortRequested: false
   };
 
   const els = {
@@ -646,7 +643,6 @@
     convertBtn: document.getElementById('convertBtn'),
     stopBtn: document.getElementById('stopBtn'),
     downloadJsonBtn: document.getElementById('downloadJsonBtn'),
-    clearBtn: document.getElementById('clearBtn'),
     statusText: document.getElementById('statusText'),
     engineStatus: document.getElementById('engineStatus'),
     dbStatus: document.getElementById('dbStatus'),
@@ -680,8 +676,7 @@
   }
 
   function log(message, type='info') {
-    const item = { message, type, time: new Date().toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit', second:'2-digit' }) };
-    state.logs.unshift(item);
+    state.logs.unshift({ message, type, time: new Date().toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit', second:'2-digit' }) });
     state.logs = state.logs.slice(0, 40);
     renderLogs();
   }
@@ -708,6 +703,10 @@
   function todayString() {
     const d = new Date();
     return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
+  }
+  function formatBytesToMB(bytes) {
+    if (bytes == null || isNaN(Number(bytes))) return '—';
+    return `${Math.max(1, Math.round(Number(bytes) / 1024 / 1024))} MB`;
   }
 
   async function sha1Hex(input) {
@@ -753,9 +752,7 @@
       'Disney': ['disney', 'pixar', 'micky', 'minnie', 'donald', 'goofy'],
       'Helden': ['held', 'super', 'spidey', 'batman', 'paw patrol', 'feuerwehrmann', 'ninjago']
     };
-    for (const [category, words] of Object.entries(map)) {
-      if (words.some(word => full.includes(word))) tags.add(category);
-    }
+    for (const [category, words] of Object.entries(map)) if (words.some(word => full.includes(word))) tags.add(category);
     if (genre) tags.add(genre);
     return [...tags];
   }
@@ -783,7 +780,8 @@
     out += `FILE "${outputName}" MP3\n`;
     chapters.forEach((ch, idx) => {
       let ts = '00:00:00';
-      if (ch > 0 && pageMap && pageMap[ch - 1] != null) ts = granuleToCue(pageMap[ch - 1]);
+      const key = ch > 0 ? ch - 1 : 0;
+      if (pageMap && pageMap[key] != null) ts = granuleToCue(pageMap[key]);
       const tName = trackList[idx] || `Kapitel ${idx + 1}`;
       out += `  TRACK ${String(idx + 1).padStart(2,'0')} AUDIO\n`;
       out += `    TITLE "${String(tName).replace(/"/g, "'")}"\n`;
@@ -876,13 +874,13 @@
     els.modalSubtitle.textContent = meta.web || meta.series || '';
     els.modalCover.src = item.coverObjectUrl || item.coverUrl || '';
     els.modalCover.alt = item.displayTitle || 'Cover';
-    const audioId = meta.audio_id || meta['audio-id'] || meta.audioId || '—';
-    const sizeVal = meta.size || item.file?.size || meta.filesize || meta.fileSize || '—';
+    const audioId = meta.audio_id || meta['audio-id'] || meta.audioId || meta.id || '—';
+    const sizeVal = meta.size || meta.filesize || item.file?.size || '—';
     els.modalMeta.innerHTML = `
       <tr><td>Serie</td><td>${meta.series || '—'}</td></tr>
       <tr><td>Episode</td><td>${meta.episode || '—'}</td></tr>
       <tr><td>Audio-ID</td><td>${audioId}</td></tr>
-      <tr><td>Größe</td><td>${sizeVal}</td></tr>
+      <tr><td>Größe</td><td>${sizeVal === '—' ? '—' : formatBytesToMB(Number(sizeVal))}</td></tr>
       <tr><td>Dauer</td><td>${meta.runtime ? `${meta.runtime} min` : '—'}</td></tr>
       <tr><td>Alter</td><td>${meta.age || '—'}</td></tr>
       <tr><td>Sprache</td><td>${meta.language || '—'}</td></tr>
@@ -915,7 +913,7 @@
         <img class="cover" src="${coverSrc}" alt="Cover Vorschau">
         <div class="filemeta">
           <h4>${item.displayTitle || item.file.name}</h4>
-          <p>${(item.meta?.series || 'Unbekannte Serie')} · ${item.format.toUpperCase()} · ${Math.round(item.file.size / 1024 / 1024 * 10) / 10} MB</p>
+          <p>${(item.meta?.series || 'Unbekannte Serie')} · ${item.format.toUpperCase()} · ${formatBytesToMB(item.file.size)}</p>
           ${item.metaPreview ? `<p>${item.metaPreview}</p>` : ''}
           <div class="tags">${(item.tags || []).slice(0, 6).map(tag => `<span class="tag">${tag}</span>`).join('')}${fallbackTag}</div>
         </div>
@@ -1013,12 +1011,7 @@
     const pageMap = {};
     let pos = HEADER_SIZE;
     while (pos < bytes.length) {
-      if (
-        bytes[pos] !== 0x4f ||
-        bytes[pos + 1] !== 0x67 ||
-        bytes[pos + 2] !== 0x67 ||
-        bytes[pos + 3] !== 0x53
-      ) {
+      if (bytes[pos] !== 0x4f || bytes[pos + 1] !== 0x67 || bytes[pos + 2] !== 0x67 || bytes[pos + 3] !== 0x53) {
         pos += 1;
         continue;
       }
@@ -1033,6 +1026,20 @@
       pos += 27 + pageSegments + segSum;
     }
     return pageMap;
+  }
+
+  async function imageUrlToJpegBlob(url, quality = 0.92) {
+    const res = await fetch(url, { mode: 'cors' });
+    const blob = await res.blob();
+    const bitmap = await createImageBitmap(blob);
+    const canvas = document.createElement('canvas');
+    canvas.width = bitmap.width;
+    canvas.height = bitmap.height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(bitmap, 0, 0);
+    const out = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', quality));
+    bitmap.close?.();
+    return out;
   }
 
   async function enrichFile(file) {
@@ -1073,13 +1080,10 @@
 
     if (coverUrl) {
       try {
-        const res = await fetch(coverUrl, { mode: 'cors' });
-        if (res.ok) {
-          coverBlob = await res.blob();
-          coverObjectUrl = URL.createObjectURL(coverBlob);
-        }
+        coverBlob = await imageUrlToJpegBlob(coverUrl, 0.92);
+        coverObjectUrl = coverBlob ? URL.createObjectURL(coverBlob) : null;
       } catch {
-        log('Cover konnte nicht per CORS geladen werden, wird nur angezeigt.', 'warn');
+        log('Cover konnte nicht geladen oder in JPG umgewandelt werden.', 'warn');
       }
     }
 
@@ -1106,6 +1110,8 @@
 
     if (Object.keys(meta).length) log(`DB-Treffer: ${title}${isFallback ? ' (Fallback)' : ''}`, isFallback ? 'warn' : 'ok');
     if (coverUrl) log('Cover-URL gefunden.', 'ok');
+    log(`Chapters: ${item.chapters.join(', ')}`, 'info');
+    log(`PageMap keys: ${Object.keys(item.pageMap).slice(0, 10).join(', ') || 'leer'}`, 'info');
     return item;
   }
 
@@ -1354,22 +1360,13 @@
   }
 
   function initDnD() {
-    const enter = e => {
-      e.preventDefault();
-      els.dropzone.classList.add('drag');
-    };
-
-    const leave = e => {
-      e.preventDefault();
-      els.dropzone.classList.remove('drag');
-    };
-
+    const enter = e => { e.preventDefault(); els.dropzone.classList.add('drag'); };
+    const leave = e => { e.preventDefault(); els.dropzone.classList.remove('drag'); };
     const drop = async e => {
       e.preventDefault();
       els.dropzone.classList.remove('drag');
       await addFiles([...e.dataTransfer.files]);
     };
-
     ['dragenter', 'dragover'].forEach(type => els.dropzone.addEventListener(type, enter));
     ['dragleave', 'dragend'].forEach(type => els.dropzone.addEventListener(type, leave));
     els.dropzone.addEventListener('drop', drop);
@@ -1380,23 +1377,15 @@
       await addFiles([...e.target.files]);
       e.target.value = '';
     });
-
     els.convertBtn.addEventListener('click', startConversion);
-
     els.stopBtn.addEventListener('click', () => {
       state.abortRequested = true;
       setStatus('Abbruch angefordert …');
       log('Abbruch angefordert.', 'warn');
     });
-
     els.downloadJsonBtn.addEventListener('click', downloadJsonOnly);
-    els.clearBtn.addEventListener('click', clearQueue);
     els.closeModalBtn.addEventListener('click', closeModal);
-
-    els.detailModal.addEventListener('click', e => {
-      if (e.target === els.detailModal) closeModal();
-    });
-
+    els.detailModal.addEventListener('click', e => { if (e.target === els.detailModal) closeModal(); });
     els.createJson.addEventListener('change', updateJsonBtnVisibility);
   }
 
@@ -1415,6 +1404,25 @@
   }
 
   init();
+
+  async function addFiles(fileList) {
+    await fetchToniesDb();
+    const tafs = [...fileList].filter(file => file.name.toLowerCase().endsWith('.taf'));
+    if (!tafs.length) {
+      setStatus('Keine TAF-Dateien gefunden.');
+      log('Import abgebrochen: keine TAF-Dateien.', 'warn');
+      return;
+    }
+    setStatus('Dateien werden analysiert …');
+    for (const file of tafs) {
+      const item = await enrichFile(file);
+      if (item === null) continue;
+      state.files.push(item);
+      renderQueue();
+    }
+    setStatus(`${state.files.length} Datei(en) bereit.`);
+    log(`${state.files.length} Datei(en) für die Konvertierung bereit.`, 'ok');
+  }
 </script>
 </body>
 </html>
