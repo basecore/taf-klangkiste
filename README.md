@@ -170,3 +170,37 @@ Aktuelle Version: `1.2.0`
 ## Lizenz
 
 Dieses Projekt steht unter der MIT-Lizenz.
+
+## FFmpeg-Dateien bereitstellen
+
+Die Dateien in `assets/ffmpeg/` sind für den Browser-Export notwendig. Dazu gehören vor allem `ffmpeg-core.js`, `ffmpeg-core.wasm`, `ffmpeg-core.worker.js` und die unterstützenden Worker-Dateien.
+
+### Warum das wichtig ist
+
+Die `.wasm`-Datei ist oft zu groß, um sie bequem direkt im GitHub-Webeditor hochzuladen. Für solche Dateien ist es praktischer, sie lokal im eigenen Projektordner vorzubereiten und dann per Git zu committen und zu pushen.
+
+### Empfohlener Weg
+
+1. Erstelle den Ordner `assets/ffmpeg/` lokal auf deinem Rechner.
+2. Kopiere die benötigten FFmpeg-Dateien dort hinein.
+3. Prüfe, ob die Dateien direkt neben deiner `index.html` erreichbar sind.
+4. Füge die Dateien mit Git hinzu.
+5. Committe und pushe das Repository ganz normal.
+
+Beispiel:
+
+```bash
+mkdir -p assets/ffmpeg
+git add assets/ffmpeg
+git commit -m "Add local FFmpeg assets"
+git push
+```
+
+### Wenn die Datei zu groß ist
+
+Falls GitHub beim Webeditor oder beim normalen Upload Probleme mit der Größe macht, solltest du die Dateien nicht über den Browser einpflegen, sondern über deinen lokalen Git-Client. Das ist der zuverlässigste Weg für große Binärdateien wie `.wasm`.
+
+### Wichtiger Hinweis
+
+Die App erwartet die FFmpeg-Dateien in derselben Origin wie die `index.html`. Deshalb ist der lokale Ordner `assets/ffmpeg/` die richtige Lösung für GitHub Pages.
+
