@@ -320,7 +320,7 @@
     .actions{
       display:grid;
       gap:10px;
-      grid-template-columns:1fr 1fr;
+      grid-template-columns:1fr 1fr 1fr;
       margin-top:12px;
     }
     .statusbox{
@@ -559,7 +559,6 @@
               <option value="ogg">OGG – direkt übernehmen</option>
             </select>
           </div>
-
           <div class="field">
             <label for="qualitySelect">Qualität / Bitrate</label>
             <select id="qualitySelect">
@@ -569,12 +568,10 @@
               <option value="320k">320 kbps</option>
             </select>
           </div>
-
           <div class="field">
             <label for="artistFallback">Fallback Artist</label>
             <input id="artistFallback" type="text" value="Tonie" placeholder="z. B. Tonie" />
           </div>
-
           <div class="field">
             <label for="commentLimit">Kommentar-Limit</label>
             <input id="commentLimit" type="number" min="0" step="100" value="5000" />
@@ -592,6 +589,7 @@
           <button class="btn btn-primary" id="convertBtn" type="button">Konvertierung starten</button>
           <button class="btn btn-secondary" id="downloadJsonBtn" type="button">Nur JSON laden</button>
           <button class="btn btn-secondary" id="demoBtn" type="button">Demo laden</button>
+          <button class="btn btn-danger" id="stopBtn" type="button">Stopp</button>
           <button class="btn btn-danger" id="clearBtn" type="button">Liste leeren</button>
         </div>
 
@@ -633,12 +631,12 @@
     const TONIES_DB_URL = 'https://raw.githubusercontent.com/toniebox-reverse-engineering/tonies-json/release/toniesV2.json';
 
     const TOPIC_KEYWORDS = {
-      'Weihnachten': ['weihnacht', 'advent', 'christmas', 'nikolaus', 'winter'],
-      'Märchen': ['märchen', 'fee', 'hex', 'prinz', 'könig', 'wolf', 'grimm'],
+      'Weihnachten': ['weihnacht', 'advent', 'christmas', 'nikolaus', 'rentier', 'krippe', 'winter'],
+      'Märchen': ['märchen', 'fee', 'hex', 'prinz', 'könig', 'wolf', 'rotkäppchen', 'grimm', 'fabel'],
       'Tiere': ['tier', 'zoo', 'bauernhof', 'dino', 'pferd', 'hund', 'katze', 'löwe', 'bär', 'wal'],
-      'Einschlafen': ['schlaf', 'gute nacht', 'träum', 'sandmann', 'ruhe', 'bett'],
-      'Musik': ['lied', 'sing', 'musik', 'song', 'tanzen', 'rhythmus', 'orchester'],
-      'Lernen': ['wissen', 'lernen', 'schule', 'entdeck', 'forscher', 'englisch', 'buchstabe', 'zahl'],
+      'Einschlafen': ['schlaf', 'gute nacht', 'träum', 'sandmann', 'lullaby', 'ruhe', 'bett'],
+      'Musik': ['lied', 'sing', 'musik', 'song', 'tanzen', 'rhythmus', 'orchester', 'minimusiker'],
+      'Lernen': ['wissen', 'lernen', 'schule', 'was ist was', 'entdeck', 'forscher', 'englisch', 'buchstabe', 'zahl'],
       'Abenteuer': ['abenteuer', 'pirat', 'räuber', 'schatz', 'reise', 'detektiv', 'drache', 'ritter'],
       'Disney': ['disney', 'pixar', 'micky', 'minnie', 'donald', 'goofy'],
       'Helden': ['held', 'super', 'spidey', 'batman', 'paw patrol', 'feuerwehrmann', 'ninjago']
@@ -652,7 +650,8 @@
       ffmpegLoaded: false,
       converted: 0,
       generatedEntries: [],
-      logs: []
+      logs: [],
+      abortRequested: false
     };
 
     const els = {
@@ -670,6 +669,7 @@
       createCovers: document.getElementById('createCovers'),
       zipAll: document.getElementById('zipAll'),
       convertBtn: document.getElementById('convertBtn'),
+      stopBtn: document.getElementById('stopBtn'),
       downloadJsonBtn: document.getElementById('downloadJsonBtn'),
       demoBtn: document.getElementById('demoBtn'),
       clearBtn: document.getElementById('clearBtn'),
@@ -681,17 +681,13 @@
       metricDb: document.getElementById('metricDb')
     };
 
-    function log(message, type = 'info') {
-      const item = {
-        message,
-        type,
-        time: new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-      };
+    function log(message, type='info') {
+      const item = { message, type, time: new Date().toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit', second:'2-digit' }) };
       state.logs.unshift(item);
       state.logs = state.logs.slice(0, 40);
       renderLogs();
     }
-    
+
     function renderLogs() {
       els.logList.innerHTML = state.logs.length ? state.logs.map(entry => `
         <div class="logitem ${entry.type}">
@@ -715,8 +711,9 @@
       return (name || '').replace(/[^\w .\-()äöüÄÖÜß]/g, '_').trim() || 'unbekannt';
     }
 
-    async function sha1Hex(buffer) {
-      const digest = await crypto.subtle.digest('SHA-1', buffer);
+    async function sha1Hex(input) {
+      const bytes = input instanceof Uint8Array ? input : new Uint8Array(input);
+      const digest = await crypto.subtle.digest('SHA-1', bytes);
       return [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, '0')).join('');
     }
 
@@ -977,12 +974,13 @@
         trackList: meta.tracks || meta['track-desc'] || meta.trackList || [],
         metaPreview: summarizeMeta(meta)
       };
-    
+
       log(`Import: ${file.name} (${Math.round(file.size / 1024)} KB)`, 'ok');
+      log(`Audio-Bytes: ${audioSlice.length}`, 'info');
       log(`Hash: ${normalizedHash}`, 'info');
-      if (meta && Object.keys(meta).length) log(`DB-Treffer: ${title}`, 'ok');
+      if (Object.keys(meta).length) log(`DB-Treffer: ${title}`, 'ok');
       else log(`Kein DB-Treffer für ${file.name}`, 'warn');
-    
+
       if (coverUrl) {
         log('Cover-URL gefunden, lade Vorschau …', 'info');
         const blob = await fetchCoverBlob(coverUrl);
@@ -996,7 +994,7 @@
       }
       return item;
     }
-    
+
     async function addFiles(fileList) {
       await fetchToniesDb();
       const tafs = [...fileList].filter(file => file.name.toLowerCase().endsWith('.taf'));
@@ -1080,12 +1078,18 @@
         );
 
         ffmpeg.on('progress', ({ progress }) => {
+          if (state.abortRequested) return;
           item.progress = Math.max(20, Math.min(96, Math.round(progress * 100)));
           item.status = `Konvertiert ${item.progress}%`;
           renderQueue();
         });
 
         await ffmpeg.exec(args);
+
+        if (state.abortRequested) {
+          log('Konvertierung wurde abgebrochen.', 'warn');
+          throw new Error('aborted');
+        }
 
         const outData = await ffmpeg.readFile(outputTmp);
         zipFolder.file(outputName, new Blob([outData.buffer], { type: format === 'mp3' ? 'audio/mpeg' : 'audio/mp4' }));
@@ -1133,6 +1137,7 @@
       }
 
       els.convertBtn.disabled = true;
+      state.abortRequested = false;
       state.converted = 0;
       state.generatedEntries = [];
       updateMetrics();
@@ -1142,22 +1147,30 @@
       const zip = new JSZip();
       const folder = zip.folder('klangkiste_output');
 
-      for (let i = 0; i < state.files.length; i++) {
-        await convertOne(state.files[i], i, state.files.length, folder);
-      }
+      try {
+        for (let i = 0; i < state.files.length; i++) {
+          if (state.abortRequested) break;
+          await convertOne(state.files[i], i, state.files.length, folder);
+        }
 
-      if (els.createJson.checked) {
-        folder.file('klangkiste.json', JSON.stringify(state.generatedEntries, null, 4));
-        log('klangkiste.json erzeugt.', 'ok');
+        if (state.abortRequested) {
+          setStatus('Konvertierung abgebrochen.');
+          log('Konvertierung abgebrochen.', 'warn');
+        } else {
+          if (els.createJson.checked) {
+            folder.file('klangkiste.json', JSON.stringify(state.generatedEntries, null, 4));
+            log('klangkiste.json erzeugt.', 'ok');
+          }
+          setStatus('ZIP wird erstellt …');
+          log('ZIP-Archiv wird erstellt …', 'info');
+          const zipBlob = await zip.generateAsync({ type: 'blob' });
+          triggerDownload(zipBlob, 'klangkiste-go-export.zip');
+          setStatus('Fertig. Download wurde vorbereitet.');
+          log('Download vorbereitet.', 'ok');
+        }
+      } finally {
+        els.convertBtn.disabled = false;
       }
-
-      setStatus('ZIP wird erstellt …');
-      log('ZIP-Archiv wird erstellt …', 'info');
-      const zipBlob = await zip.generateAsync({ type: 'blob' });
-      triggerDownload(zipBlob, 'klangkiste-go-export.zip');
-      setStatus('Fertig. Download wurde vorbereitet.');
-      log('Download vorbereitet.', 'ok');
-      els.convertBtn.disabled = false;
     }
 
     function downloadJsonOnly() {
@@ -1252,6 +1265,11 @@
         e.target.value = '';
       });
       els.convertBtn.addEventListener('click', startConversion);
+      els.stopBtn.addEventListener('click', () => {
+        state.abortRequested = true;
+        setStatus('Abbruch angefordert …');
+        log('Abbruch angefordert.', 'warn');
+      });
       els.downloadJsonBtn.addEventListener('click', downloadJsonOnly);
       els.demoBtn.addEventListener('click', loadDemo);
       els.clearBtn.addEventListener('click', clearQueue);
