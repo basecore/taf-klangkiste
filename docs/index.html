@@ -62,11 +62,8 @@
     .panel { padding: var(--space-6); }
     .panel h3 { margin: 0 0 var(--space-4); font-size: var(--text-lg); font-family: var(--font-display); }
     .dropzone { position: relative; overflow: hidden; border: 1.5px solid color-mix(in srgb, var(--color-primary) 24%, var(--color-border)); border-radius: 28px; padding: var(--space-8); background: linear-gradient(180deg, rgba(255,255,255,.96), rgba(255,255,255,.72)); text-align: center; transition: transform var(--transition), border-color var(--transition), background var(--transition), box-shadow var(--transition); box-shadow: inset 0 1px 0 rgba(255,255,255,.7); }
-    .dropzone::before { content: ''; position: absolute; inset: -2px; background: linear-gradient(90deg, transparent, rgba(15,118,110,.08), transparent); transform: translateX(-120%); opacity: 0; transition: opacity .2s; }
     .dropzone.drag { transform: translateY(-2px) scale(1.01); border-color: var(--color-primary); background: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface)); box-shadow: 0 18px 50px rgba(15,118,110,.12); }
-    .dropzone.drag::before { opacity: 1; animation: sweep 1.2s linear infinite; }
-    @keyframes sweep { from { transform: translateX(-120%); } to { transform: translateX(120%); } }
-    .button-row, .settings-grid { display: grid; gap: var(--space-3); }
+    .button-row, .settings-grid, .two-col { display: grid; gap: var(--space-3); }
     .settings-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
     .field { display: grid; gap: .45rem; }
     .field label { font-size: var(--text-sm); font-weight: 700; }
@@ -75,10 +72,7 @@
     .check { display: flex; align-items: flex-start; gap: .75rem; padding: .8rem 1rem; border-radius: var(--radius-lg); background: var(--color-surface-2); border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent); }
     .check input { margin-top: .25rem; }
     .btn { min-height: 54px; border-radius: 18px; border: none; padding: .95rem 1.2rem; cursor: pointer; font-weight: 700; transition: transform var(--transition), background var(--transition), opacity var(--transition), box-shadow var(--transition); box-shadow: var(--shadow-sm); }
-    .btn:hover { transform: translateY(-1px); }
-    .btn:active { transform: translateY(0); }
     .btn-primary { background: linear-gradient(180deg, color-mix(in srgb, var(--color-primary) 95%, white), var(--color-primary)); color: var(--color-text-inverse); }
-    .btn-primary:hover { background: var(--color-primary-hover); box-shadow: 0 14px 30px rgba(15,118,110,.22); }
     .btn-secondary { background: var(--color-surface-2); color: var(--color-text); border: 1px solid var(--color-border); }
     .btn-danger { background: color-mix(in srgb, var(--color-error) 12%, var(--color-surface-2)); color: var(--color-error); border: 1px solid color-mix(in srgb, var(--color-error) 18%, transparent); }
     .muted { color: var(--color-text-muted); font-size: var(--text-sm); }
@@ -96,24 +90,8 @@
     .progress-bar { height: 8px; border-radius: 999px; overflow: hidden; background: var(--color-surface-offset); margin-bottom: .35rem; }
     .progress-bar > span { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--color-primary), var(--color-blue)); transition: width .2s linear; }
     .footer-note { margin-top: var(--space-6); color: var(--color-text-muted); font-size: var(--text-sm); }
-    @keyframes floaty { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
-    .hero-main, .side-panel { animation: floaty 8s ease-in-out infinite; }
-    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
-    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
-    a.inline-link { color: var(--color-primary); text-decoration: none; }
     @media (max-width: 980px) { .hero, .grid { grid-template-columns: 1fr; } }
-    @media (max-width: 640px) {
-      .shell { width: min(100% - .85rem, 1180px); padding-top: .8rem; }
-      .hero-main, .side-panel, .panel { padding: .95rem; }
-      .settings-grid, .two-col, .hero-points { grid-template-columns: 1fr; }
-      .file-card { grid-template-columns: 56px 1fr; }
-      .progress-wrap { grid-column: 1 / -1; width: 100%; text-align: left; }
-      .cover-thumb { width: 56px; height: 56px; border-radius: 14px; }
-      .title { font-size: 1.25rem; }
-      .hero-main h2 { font-size: clamp(1.8rem, 7vw, 2.5rem); }
-      .btn { min-height: 58px; }
-      .dropzone { padding: 1rem; }
-    }
+    @media (max-width: 640px) { .shell { width: min(100% - .85rem, 1180px); padding-top: .8rem; } .hero-main, .side-panel, .panel { padding: .95rem; } .settings-grid, .two-col, .hero-points { grid-template-columns: 1fr; } .file-card { grid-template-columns: 56px 1fr; } .progress-wrap { grid-column: 1 / -1; width: 100%; text-align: left; } .cover-thumb { width: 56px; height: 56px; border-radius: 14px; } .title { font-size: 1.25rem; } .hero-main h2 { font-size: clamp(1.8rem, 7vw, 2.5rem); } .btn { min-height: 58px; } .dropzone { padding: 1rem; } }
   </style>
 </head>
 <body>
@@ -238,76 +216,26 @@
     import { fetchFile, toBlobURL } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js';
     import JSZip from 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm';
 
+    const FFMPEG_BASE = './assets/ffmpeg';
     const HEADER_SIZE = 4096;
     const OPUS_SAMPLE_RATE = 48000.0;
     const TONIES_DB_URL = 'https://raw.githubusercontent.com/toniebox-reverse-engineering/tonies-json/release/toniesV2.json';
-    const TOPIC_KEYWORDS = {
-      'Weihnachten': ['weihnacht', 'advent', 'christmas', 'nikolaus', 'rentier', 'krippe', 'winter'],
-      'Märchen': ['märchen', 'fee', 'hex', 'prinz', 'könig', 'wolf', 'rotkäppchen', 'grimm', 'fabel'],
-      'Tiere': ['tier', 'zoo', 'bauernhof', 'dino', 'pferd', 'hund', 'katze', 'löwe', 'bär', 'wal'],
-      'Einschlafen': ['schlaf', 'gute nacht', 'träum', 'sandmann', 'lullaby', 'ruhe', 'bett'],
-      'Musik': ['lied', 'sing', 'musik', 'song', 'tanzen', 'rhythmus', 'orchester', 'minimusiker'],
-      'Lernen': ['wissen', 'lernen', 'schule', 'was ist was', 'entdeck', 'forscher', 'englisch', 'buchstabe', 'zahl'],
-      'Abenteuer': ['abenteuer', 'pirat', 'räuber', 'schatz', 'reise', 'detektiv', 'drache', 'ritter'],
-      'Disney': ['disney', 'pixar', 'micky', 'minnie', 'donald', 'goofy'],
-      'Helden': ['held', 'super', 'spidey', 'batman', 'paw patrol', 'feuerwehrmann', 'ninjago']
-    };
+    const TOPIC_KEYWORDS = { 'Weihnachten': ['weihnacht', 'advent', 'christmas', 'nikolaus', 'rentier', 'krippe', 'winter'], 'Märchen': ['märchen', 'fee', 'hex', 'prinz', 'könig', 'wolf', 'rotkäppchen', 'grimm', 'fabel'], 'Tiere': ['tier', 'zoo', 'bauernhof', 'dino', 'pferd', 'hund', 'katze', 'löwe', 'bär', 'wal'], 'Einschlafen': ['schlaf', 'gute nacht', 'träum', 'sandmann', 'lullaby', 'ruhe', 'bett'], 'Musik': ['lied', 'sing', 'musik', 'song', 'tanzen', 'rhythmus', 'orchester', 'minimusiker'], 'Lernen': ['wissen', 'lernen', 'schule', 'was ist was', 'entdeck', 'forscher', 'englisch', 'buchstabe', 'zahl'], 'Abenteuer': ['abenteuer', 'pirat', 'räuber', 'schatz', 'reise', 'detektiv', 'drache', 'ritter'], 'Disney': ['disney', 'pixar', 'micky', 'minnie', 'donald', 'goofy'], 'Helden': ['held', 'super', 'spidey', 'batman', 'paw patrol', 'feuerwehrmann', 'ninjago'] };
 
-    const state = {
-      files: [],
-      toniesDb: {},
-      rawDbLoaded: false,
-      ffmpeg: null,
-      ffmpegLoaded: false,
-      converted: 0,
-      generatedEntries: []
-    };
-
-    const els = {
-      fileInput: document.getElementById('fileInput'),
-      pickFilesBtn: document.getElementById('pickFilesBtn'),
-      dropzone: document.getElementById('dropzone'),
-      queue: document.getElementById('queue'),
-      convertBtn: document.getElementById('convertBtn'),
-      clearBtn: document.getElementById('clearBtn'),
-      demoBtn: document.getElementById('demoBtn'),
-      downloadJsonBtn: document.getElementById('downloadJsonBtn'),
-      statusText: document.getElementById('statusText'),
-      engineStatus: document.getElementById('engineStatus'),
-      dbStatus: document.getElementById('dbStatus'),
-      metricFiles: document.getElementById('metricFiles'),
-      metricConverted: document.getElementById('metricConverted'),
-      metricDb: document.getElementById('metricDb'),
-      formatSelect: document.getElementById('formatSelect'),
-      qualitySelect: document.getElementById('qualitySelect'),
-      artistFallback: document.getElementById('artistFallback'),
-      commentLimit: document.getElementById('commentLimit'),
-      embedCover: document.getElementById('embedCover'),
-      createJson: document.getElementById('createJson'),
-      createCovers: document.getElementById('createCovers'),
-      zipAll: document.getElementById('zipAll')
-    };
+    const state = { files: [], toniesDb: {}, rawDbLoaded: false, ffmpeg: null, ffmpegLoaded: false, converted: 0, generatedEntries: [] };
+    const els = { fileInput: document.getElementById('fileInput'), pickFilesBtn: document.getElementById('pickFilesBtn'), dropzone: document.getElementById('dropzone'), queue: document.getElementById('queue'), convertBtn: document.getElementById('convertBtn'), clearBtn: document.getElementById('clearBtn'), demoBtn: document.getElementById('demoBtn'), downloadJsonBtn: document.getElementById('downloadJsonBtn'), statusText: document.getElementById('statusText'), engineStatus: document.getElementById('engineStatus'), dbStatus: document.getElementById('dbStatus'), metricFiles: document.getElementById('metricFiles'), metricConverted: document.getElementById('metricConverted'), metricDb: document.getElementById('metricDb'), formatSelect: document.getElementById('formatSelect'), qualitySelect: document.getElementById('qualitySelect'), artistFallback: document.getElementById('artistFallback'), commentLimit: document.getElementById('commentLimit'), embedCover: document.getElementById('embedCover'), createJson: document.getElementById('createJson'), createCovers: document.getElementById('createCovers'), zipAll: document.getElementById('zipAll') };
 
     function setTheme() {
       const btn = document.querySelector('[data-theme-toggle]');
       let current = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
       document.documentElement.setAttribute('data-theme', current);
-      btn.addEventListener('click', () => {
-        current = current === 'dark' ? 'light' : 'dark';
-        document.documentElement.setAttribute('data-theme', current);
-      });
-      document.querySelectorAll('[data-preset]').forEach(button => {
-        button.addEventListener('click', () => applyPreset(button.dataset.preset));
-      });
+      btn.addEventListener('click', () => { current = current === 'dark' ? 'light' : 'dark'; document.documentElement.setAttribute('data-theme', current); });
+      document.querySelectorAll('[data-preset]').forEach(button => button.addEventListener('click', () => applyPreset(button.dataset.preset)));
     }
 
     function applyPreset(preset) {
       const root = document.documentElement;
-      const presets = {
-        teal: { primary: '#0f766e', hover: '#115e59', hi: '#d6f3ef', badge: '#0ea5a0' },
-        pink: { primary: '#db2777', hover: '#be185d', hi: '#fce7f3', badge: '#ec4899' },
-        gray: { primary: '#4b5563', hover: '#374151', hi: '#e5e7eb', badge: '#6b7280' }
-      };
+      const presets = { teal: { primary: '#0f766e', hover: '#115e59', hi: '#d6f3ef', badge: '#0ea5a0' }, pink: { primary: '#db2777', hover: '#be185d', hi: '#fce7f3', badge: '#ec4899' }, gray: { primary: '#4b5563', hover: '#374151', hi: '#e5e7eb', badge: '#6b7280' } };
       const p = presets[preset] || presets.teal;
       root.style.setProperty('--color-primary', p.primary);
       root.style.setProperty('--color-primary-hover', p.hover);
@@ -319,20 +247,10 @@
     function setStatus(text) { els.statusText.textContent = text; }
     function setDbStatus(text) { els.dbStatus.textContent = text; }
     function setEngineStatus(text) { els.engineStatus.textContent = text; }
-    function updateMetrics() {
-      els.metricFiles.textContent = String(state.files.length);
-      els.metricConverted.textContent = String(state.converted);
-      els.metricDb.textContent = state.rawDbLoaded ? `${Object.keys(state.toniesDb).length} Hashes` : 'nicht geladen';
-    }
+    function updateMetrics() { els.metricFiles.textContent = String(state.files.length); els.metricConverted.textContent = String(state.converted); els.metricDb.textContent = state.rawDbLoaded ? `${Object.keys(state.toniesDb).length} Hashes` : 'nicht geladen'; }
 
-    async function sha1Hex(buffer) {
-      const digest = await crypto.subtle.digest('SHA-1', buffer);
-      return [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, '0')).join('');
-    }
-
-    function cleanFilename(name) {
-      return (name || '').replace(/[^\w .\-()äöüÄÖÜß]/g, '_').trim() || 'unbekannt';
-    }
+    async function sha1Hex(buffer) { const digest = await crypto.subtle.digest('SHA-1', buffer); return [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, '0')).join(''); }
+    function cleanFilename(name) { return (name || '').replace(/[^\w .\-()äöüÄÖÜß]/g, '_').trim() || 'unbekannt'; }
 
     function normalizeDb(jsonData) {
       const db = {};
@@ -347,9 +265,7 @@
             }
           } else if (item && item.hash) {
             const hashes = Array.isArray(item.hash) ? item.hash : [item.hash];
-            for (const h of hashes) {
-              if (h) db[String(h).toLowerCase()] = item;
-            }
+            for (const h of hashes) if (h) db[String(h).toLowerCase()] = item;
           }
         }
       }
@@ -368,9 +284,7 @@
     function detectTags(title, desc, genre='') {
       const tags = new Set();
       const full = `${title || ''} ${desc || ''} ${genre || ''}`.toLowerCase();
-      Object.entries(TOPIC_KEYWORDS).forEach(([category, words]) => {
-        if (words.some(word => full.includes(word))) tags.add(category);
-      });
+      Object.entries(TOPIC_KEYWORDS).forEach(([category, words]) => { if (words.some(word => full.includes(word))) tags.add(category); });
       if (genre) tags.add(genre);
       return [...tags];
     }
@@ -415,10 +329,7 @@
       const pageMap = {};
       let pos = HEADER_SIZE;
       while (pos < uint8.length - 27) {
-        if (!(uint8[pos] === 0x4f && uint8[pos + 1] === 0x67 && uint8[pos + 2] === 0x67 && uint8[pos + 3] === 0x53)) {
-          pos += 1;
-          continue;
-        }
+        if (!(uint8[pos] === 0x4f && uint8[pos + 1] === 0x67 && uint8[pos + 2] === 0x67 && uint8[pos + 3] === 0x53)) { pos += 1; continue; }
         const view = new DataView(uint8.buffer, uint8.byteOffset + pos + 4, 23);
         const granule = Number(view.getBigUint64(2, true));
         const sequence = view.getUint32(18, true);
@@ -433,9 +344,7 @@
 
     function granuleToCue(granule) {
       const seconds = granule / OPUS_SAMPLE_RATE;
-      const m = Math.floor(seconds / 60);
-      const s = Math.floor(seconds % 60);
-      const f = Math.floor((seconds - Math.floor(seconds)) * 75);
+      const m = Math.floor(seconds / 60), s = Math.floor(seconds % 60), f = Math.floor((seconds - Math.floor(seconds)) * 75);
       return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}:${String(f).padStart(2,'0')}`;
     }
 
@@ -459,12 +368,12 @@
       if (state.ffmpegLoaded) return state.ffmpeg;
       setEngineStatus('FFmpeg.wasm wird geladen ...');
       const ffmpeg = new FFmpeg();
-      const baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd';
-      const [coreURL, wasmURL] = await Promise.all([
-        toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-        toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm')
+      const [coreURL, wasmURL, workerURL] = await Promise.all([
+        toBlobURL(`${FFMPEG_BASE}/ffmpeg-core.js`, 'text/javascript'),
+        toBlobURL(`${FFMPEG_BASE}/ffmpeg-core.wasm`, 'application/wasm'),
+        toBlobURL(`${FFMPEG_BASE}/ffmpeg-core.worker.js`, 'text/javascript')
       ]);
-      await ffmpeg.load({ coreURL, wasmURL });
+      await ffmpeg.load({ coreURL, wasmURL, workerURL, classWorkerURL: `${FFMPEG_BASE}/worker.js` });
       state.ffmpeg = ffmpeg;
       state.ffmpegLoaded = true;
       setEngineStatus('FFmpeg.wasm geladen und einsatzbereit.');
@@ -473,13 +382,7 @@
 
     async function fetchCoverBlob(url) {
       if (!url) return null;
-      try {
-        const res = await fetch(url, { mode: 'cors' });
-        if (!res.ok) return null;
-        return await res.blob();
-      } catch {
-        return null;
-      }
+      try { const res = await fetch(url, { mode: 'cors' }); if (!res.ok) return null; return await res.blob(); } catch { return null; }
     }
 
     function buildCue(title, outputName, chapters, pageMap, trackList=[]) {
@@ -494,21 +397,7 @@
     }
 
     function buildKlangkisteEntry(fileHash, title, outputName, imageFileName, finalDesc, finalAge, finalGenre, series, runtime, tags) {
-      return {
-        tagId: `auto_${fileHash ? fileHash.slice(0, 10) : 'unknown'}`,
-        name: title,
-        playlistFileNames: [outputName],
-        imageFileName: imageFileName || null,
-        meta: {
-          description: finalDesc,
-          age_recommendation: finalAge,
-          genre: finalGenre,
-          series: series,
-          runtime: runtime || 0
-        },
-        filter_age: finalAge,
-        tags
-      };
+      return { tagId: `auto_${fileHash ? fileHash.slice(0, 10) : 'unknown'}`, name: title, playlistFileNames: [outputName], imageFileName: imageFileName || null, meta: { description: finalDesc, age_recommendation: finalAge, genre: finalGenre, series, runtime: runtime || 0 }, filter_age: finalAge, tags };
     }
 
     function triggerDownload(blob, filename) {
@@ -524,11 +413,7 @@
 
     function renderQueue() {
       els.queue.innerHTML = '';
-      if (!state.files.length) {
-        els.queue.innerHTML = '<div class="status-line">Noch keine Dateien ausgewählt.</div>';
-        updateMetrics();
-        return;
-      }
+      if (!state.files.length) { els.queue.innerHTML = '<div class="status-line">Noch keine Dateien ausgewählt.</div>'; updateMetrics(); return; }
       state.files.forEach((item) => {
         const node = document.createElement('article');
         node.className = 'file-card';
@@ -569,32 +454,8 @@
       const tags = detectTags(title, finalDesc, finalGenre);
       const coverUrl = meta.image || meta.pic || null;
       const outFormat = els.formatSelect.value;
-      const item = {
-        file,
-        buffer: uint8,
-        audioBuffer: audioSlice,
-        hash,
-        meta,
-        displayTitle: title,
-        status: 'Bereit',
-        progress: 0,
-        format: outFormat,
-        tags,
-        coverUrl,
-        coverBlob: null,
-        coverObjectUrl: null,
-        chapters: getChaptersRobust(uint8),
-        pageMap: scanOggTimestamps(uint8),
-        trackList: (meta.tracks || meta['track-desc'] || meta.trackList || []),
-        metaPreview
-      };
-      if (coverUrl) {
-        const blob = await fetchCoverBlob(coverUrl);
-        if (blob) {
-          item.coverBlob = blob;
-          item.coverObjectUrl = URL.createObjectURL(blob);
-        }
-      }
+      const item = { file, buffer: uint8, audioBuffer: audioSlice, hash, meta, displayTitle: title, status: 'Bereit', progress: 0, format: outFormat, tags, coverUrl, coverBlob: null, coverObjectUrl: null, chapters: getChaptersRobust(uint8), pageMap: scanOggTimestamps(uint8), trackList: (meta.tracks || meta['track-desc'] || meta.trackList || []), metaPreview };
+      if (coverUrl) { const blob = await fetchCoverBlob(coverUrl); if (blob) { item.coverBlob = blob; item.coverObjectUrl = URL.createObjectURL(blob); } }
       return item;
     }
 
@@ -660,12 +521,7 @@
           if (embedCover) args.push('-c:v', 'mjpeg');
         }
 
-        args.push('-metadata', `title=${title}`,
-                  '-metadata', `artist=${artist}`,
-                  '-metadata', `genre=${finalGenre}`,
-                  '-metadata', `comment=${comment}`,
-                  outputTmp);
-
+        args.push('-metadata', `title=${title}`, '-metadata', `artist=${artist}`, '-metadata', `genre=${finalGenre}`, '-metadata', `comment=${comment}`, outputTmp);
         ffmpeg.on('progress', ({ progress }) => {
           item.progress = Math.max(20, Math.min(96, Math.round(progress * 100)));
           item.status = `Konvertiert ${item.progress}%`;
@@ -675,7 +531,6 @@
         await ffmpeg.exec(args);
         const outData = await ffmpeg.readFile(outputTmp);
         zip.file(outputName, new Blob([outData.buffer], { type: format === 'mp3' ? 'audio/mpeg' : 'audio/mp4' }));
-
         try { await ffmpeg.deleteFile(inputName); } catch {}
         try { await ffmpeg.deleteFile(outputTmp); } catch {}
         try { await ffmpeg.deleteFile(coverName); } catch {}
@@ -683,15 +538,8 @@
         item.status = `${format.toUpperCase()} exportiert`;
       }
 
-      if (els.createCovers.checked && item.coverBlob) {
-        zip.file(`${outputBase}.jpg`, item.coverBlob);
-      }
-
-      if (item.chapters.length > 1) {
-        const cue = buildCue(title, outputName, item.chapters, item.pageMap, meta.tracks || meta['track-desc'] || []);
-        zip.file(cueName, cue);
-      }
-
+      if (els.createCovers.checked && item.coverBlob) zip.file(`${outputBase}.jpg`, item.coverBlob);
+      if (item.chapters.length > 1) zip.file(cueName, buildCue(title, outputName, item.chapters, item.pageMap, meta.tracks || meta['track-desc'] || []));
       const entry = buildKlangkisteEntry(item.hash, title, outputName, item.coverBlob ? `${outputBase}.jpg` : null, finalDesc, finalAge, finalGenre, series, meta.runtime || 0, item.tags || []);
       state.generatedEntries.push(entry);
       state.converted += 1;
@@ -700,10 +548,7 @@
     }
 
     async function startConversion() {
-      if (!state.files.length) {
-        setStatus('Bitte zuerst mindestens eine TAF-Datei auswählen.');
-        return;
-      }
+      if (!state.files.length) { setStatus('Bitte zuerst mindestens eine TAF-Datei auswählen."); return; }
       els.convertBtn.disabled = true;
       state.converted = 0;
       state.generatedEntries = [];
@@ -712,13 +557,9 @@
       const zip = new JSZip();
       const folder = zip.folder('klangkiste_output');
 
-      for (let i = 0; i < state.files.length; i++) {
-        await convertOne(state.files[i], i, state.files.length, folder);
-      }
+      for (let i = 0; i < state.files.length; i++) await convertOne(state.files[i], i, state.files.length, folder);
 
-      if (els.createJson.checked) {
-        folder.file('klangkiste.json', JSON.stringify(state.generatedEntries, null, 4));
-      }
+      if (els.createJson.checked) folder.file('klangkiste.json', JSON.stringify(state.generatedEntries, null, 4));
 
       if (els.zipAll.checked || state.files.length > 1) {
         setStatus('ZIP wird erstellt ...');
@@ -757,18 +598,7 @@
     }
 
     function loadDemo() {
-      state.files = [
-        {
-          file: new File([new Uint8Array([0])], 'beispiel.taf'),
-          buffer: new Uint8Array(),
-          audioBuffer: new Uint8Array(),
-          hash: 'demo1234567890',
-          meta: { series: 'Demo-Serie', description: 'Beispielbeschreibung für Anzeige und Tags.', age: 4, genre: 'Hörspiel', runtime: 3120 },
-          displayTitle: 'Demo-Serie - Folge 1',
-          status: 'Demo', progress: 100, format: els.formatSelect.value,
-          tags: ['Abenteuer', 'Hörspiel'], coverBlob: null, coverObjectUrl: null, chapters: [0], pageMap: {}, trackList: ['Intro', 'Kapitel 1']
-        }
-      ];
+      state.files = [{ file: new File([new Uint8Array([0])], 'beispiel.taf'), buffer: new Uint8Array(), audioBuffer: new Uint8Array(), hash: 'demo1234567890', meta: { series: 'Demo-Serie', description: 'Beispielbeschreibung für Anzeige und Tags.', age: 4, genre: 'Hörspiel', runtime: 3120 }, displayTitle: 'Demo-Serie - Folge 1', status: 'Demo', progress: 100, format: els.formatSelect.value, tags: ['Abenteuer', 'Hörspiel'], coverBlob: null, coverObjectUrl: null, chapters: [0], pageMap: {}, trackList: ['Intro', 'Kapitel 1'], metaPreview: 'Demo-Serie | Folge 1 | Beispielbeschreibung für Anzeige und Tags. | Tracks: Intro · Kapitel 1' }];
       renderQueue();
       setStatus('Demo-Eintrag geladen.');
     }
@@ -776,12 +606,7 @@
     function initDragAndDrop() {
       const enter = e => { e.preventDefault(); els.dropzone.classList.add('drag'); };
       const leave = e => { e.preventDefault(); els.dropzone.classList.remove('drag'); };
-      const drop = async e => {
-        e.preventDefault();
-        els.dropzone.classList.remove('drag');
-        const files = [...e.dataTransfer.files].filter(file => file.name.toLowerCase().endsWith('.taf'));
-        await addFiles(files);
-      };
+      const drop = async e => { e.preventDefault(); els.dropzone.classList.remove('drag'); const files = [...e.dataTransfer.files].filter(file => file.name.toLowerCase().endsWith('.taf')); await addFiles(files); };
       ['dragenter', 'dragover'].forEach(type => els.dropzone.addEventListener(type, enter));
       ['dragleave', 'dragend'].forEach(type => els.dropzone.addEventListener(type, leave));
       els.dropzone.addEventListener('drop', drop);
