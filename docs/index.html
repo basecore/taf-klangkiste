@@ -364,16 +364,28 @@
       updateMetrics();
     }
 
+
     async function ensureFfmpeg() {
       if (state.ffmpegLoaded) return state.ffmpeg;
       setEngineStatus('FFmpeg.wasm wird geladen ...');
+    
       const ffmpeg = new FFmpeg();
+    
+      const baseURL = `${window.location.origin}${window.location.pathname.replace(/\/[^/]*$/, '')}/assets/ffmpeg`;
+    
       const [coreURL, wasmURL, workerURL] = await Promise.all([
-        toBlobURL(`${FFMPEG_BASE}/ffmpeg-core.js`, 'text/javascript'),
-        toBlobURL(`${FFMPEG_BASE}/ffmpeg-core.wasm`, 'application/wasm'),
-        toBlobURL(`${FFMPEG_BASE}/ffmpeg-core.worker.js`, 'text/javascript')
+        toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
+        toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+        toBlobURL(`${baseURL}/ffmpeg-core.worker.js`, 'text/javascript')
       ]);
-      await ffmpeg.load({ coreURL, wasmURL, workerURL, classWorkerURL: `${FFMPEG_BASE}/worker.js` });
+    
+      await ffmpeg.load({
+        coreURL,
+        wasmURL,
+        workerURL,
+        classWorkerURL: `${baseURL}/worker.js`
+      });
+    
       state.ffmpeg = ffmpeg;
       state.ffmpegLoaded = true;
       setEngineStatus('FFmpeg.wasm geladen und einsatzbereit.');
