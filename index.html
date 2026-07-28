@@ -609,8 +609,8 @@
   import { fetchFile, toBlobURL } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js';
   import JSZip from 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm';
 
-  const APP_VERSION = '1.4.0';
-  const APP_DATE = new Date().toLocaleDateString('de-DE', { day:'2-digit', month:'2-digit', year:'numeric' });
+  const APP_VERSION = '1.6.0';
+  const APP_DATE = '2026-07-28';
   const HEADER_SIZE = 4096;
   const OPUS_SAMPLE_RATE = 48000;
   const TONIES_DB_URL = 'https://raw.githubusercontent.com/toniebox-reverse-engineering/tonies-json/release/toniesV2.json';
@@ -775,19 +775,35 @@
     return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}:${String(f).padStart(2,'0')}`;
   }
 
-  function chapterToCueTime(chapter, pageMap, idx) {
-    const keys = [chapter, chapter - 1, chapter + 1, idx, idx + 1].filter(v => Number.isFinite(v) && v >= 0);
-    for (const key of keys) {
-      if (pageMap && pageMap[key] != null) {
+  function chapterToCueTime(chapter, pageMap, idx, durationSec=null) {
+    const candidates = [];
+    if (chapter > 0) candidates.push(chapter - 1);
+    candidates.push(chapter, idx, idx + 1);
+    for (const key of candidates) {
+      if (Number.isFinite(key) && key >= 0 && pageMap && pageMap[key] != null) {
         const ts = granuleToCue(pageMap[key]);
         if (ts !== '00:00:00') return ts;
       }
     }
-    if (chapter > 0) return granuleToCue((chapter / 75) * OPUS_SAMPLE_RATE);
+    const rawSec = chapter > 0 ? chapter / 75 : 0;
+    if (rawSec > 0) {
+      const capped = Number.isFinite(durationSec) && durationSec > 0 ? Math.min(rawSec, durationSec - 1) : rawSec;
+      const sec = Math.max(0, capped);
+      const m = Math.floor(sec / 60);
+      const s = Math.floor(sec % 60);
+      const f = Math.floor((sec - Math.floor(sec)) * 75);
+      return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}:${String(f).padStart(2,'0')}`;
+    }
+    if (Number.isFinite(durationSec) && durationSec > 0) {
+      const sec = Math.max(0, durationSec - 1);
+      const m = Math.floor(sec / 60);
+      const s = Math.floor(sec % 60);
+      return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}:00`;
+    }
     return '00:00:00';
   }
 
-  function buildCue(title, outputName, chapters, pageMap, trackList=[], dateStr='') {
+  function buildCue(title, outputName, chapters, pageMap, trackList=[], dateStr='', durationSec=null) {
     let out = `REM CREATED BY KLANGKISTE GO\n`;
     if (dateStr) out += `REM DATE ${dateStr}\n`;
     out += `TITLE "${String(title).replace(/"/g, "'")}"\n`;
