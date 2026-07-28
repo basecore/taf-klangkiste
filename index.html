@@ -609,7 +609,7 @@
   import { fetchFile, toBlobURL } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js';
   import JSZip from 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm';
 
-  const APP_VERSION = '1.6.3';
+  const APP_VERSION = '1.7.0';
   const APP_DATE = '2026-07-28';
   const HEADER_SIZE = 4096;
   const OPUS_SAMPLE_RATE = 48000;
@@ -1156,6 +1156,8 @@
     if (Object.keys(meta).length) log(`DB-Treffer: ${title}${isFallback ? ' (Fallback)' : ''}`, isFallback ? 'warn' : 'ok');
     if (coverUrl) log('Cover-URL gefunden.', 'ok');
     log(`Chapters: ${item.chapters.join(', ')}`, 'info');
+    log(`Chapter count: ${item.chapters.length}`, 'info');
+    log(`Duration sec (runtime/meta): ${meta.runtime ? Number(meta.runtime) * 60 : 'unbekannt'}`, 'info');
     log(`PageMap keys: ${Object.keys(item.pageMap).slice(0, 10).join(', ') || 'leer'}`, 'info');
     return item;
   }
